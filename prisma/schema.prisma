@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  CEO
+  PM
+  TL
+  TM
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+}
+
+model User {
+  id         Int     @id @default(autoincrement())
+  name       String  @db.VarChar(70)
+  email      String  @unique
+  password   String?
+
+  role Role
+
+  // 🔹 Self-relation for hierarchy
+  managerId    Int?
+  manager      User?   @relation("UserHierarchy", fields: [managerId], references: [id])
+  subordinates User[]  @relation("UserHierarchy")
+
+  // 🔹 Relations
+  managedProjects Project[]       @relation("ProjectManager")
+  leadProjects    Project[]       @relation("ProjectTeamLead")
+  memberProjects  ProjectMember[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Project {
+  id           Int    @id @default(autoincrement())
+  name         String
+  description  String?
+
+  status ProjectStatus  @default(ACTIVE)
+
+  // 🔹 Assigned PM
+  pmId         Int
+  projectManager User   @relation("ProjectManager", fields: [pmId], references: [id])
+
+  // 🔹 Assigned Team Lead
+  tlId        Int?
+  teamLead User?        @relation("ProjectTeamLead", fields: [tlId], references: [id])
+
+  // 🔹 Team Members (many-to-many)
+  members ProjectMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id         Int    @id @default(autoincrement())
+  userId     Int
+  projectId  Int
+  user       User    @relation(fields: [userId], references: [id])
+  project    Project @relation(fields: [projectId], references: [id])
+  assignedAt DateTime @default(now())
+  @@unique([userId, projectId])
+}
+
+
+// model Permission {
+//   id       String @id @default(uuid())
+//   role     Role
+//   resource String
+//   action   String
+// }

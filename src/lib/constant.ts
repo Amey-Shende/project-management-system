@@ -1,0 +1,1 @@
+export const TOKEN_MAX_AGE_MINUTES = parseInt(process.env.JWT_EXPIRES_IN || "30");
