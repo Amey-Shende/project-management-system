@@ -24,46 +24,61 @@ enum ProjectStatus {
   COMPLETED
 }
 
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
-  id         Int     @id @default(autoincrement())
-  name       String  @db.VarChar(70)
-  email      String  @unique
-  password   String?
+  id          Int     @id @default(autoincrement())
+  name        String  @db.VarChar(70)
+  email       String  @unique
+  password    String?
+  role        Role
+  skills      Json?   @default("[]")
+  department  String? @db.VarChar(50)
+  designation String? @db.VarChar(50)
+  phone       String? @db.VarChar(20)
+  avatar      String? @db.VarChar(255)
+  isActive    Boolean @default(true)
 
-  role Role
-
-  // 🔹 Self-relation for hierarchy
+  //🔹 Self-relation for hierarchy
   managerId    Int?
-  manager      User?   @relation("UserHierarchy", fields: [managerId], references: [id])
-  subordinates User[]  @relation("UserHierarchy")
+  manager      User?  @relation("UserHierarchy", fields: [managerId], references: [id])
+  subordinates User[] @relation("UserHierarchy")
 
-  // 🔹 Relations
+  //🔹 Relations
   managedProjects Project[]       @relation("ProjectManager")
   leadProjects    Project[]       @relation("ProjectTeamLead")
   memberProjects  ProjectMember[]
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
 model Project {
-  id           Int    @id @default(autoincrement())
-  name         String
-  description  String?
-
-  status ProjectStatus  @default(ACTIVE)
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(100)
+  description String?         @db.Text
+  status      ProjectStatus   @default(ACTIVE)
+  techstack   Json?           @default("[]")
+  priority    ProjectPriority @default(MEDIUM)
+  startDate   DateTime?
+  endDate     DateTime?
+  progress    Int             @default(0) @db.TinyInt
 
   // 🔹 Assigned PM
-  pmId         Int
-  projectManager User   @relation("ProjectManager", fields: [pmId], references: [id])
+  pmId           Int?
+  projectManager User? @relation("ProjectManager", fields: [pmId], references: [id])
 
-  // 🔹 Assigned Team Lead
-  tlId        Int?
-  teamLead User?        @relation("ProjectTeamLead", fields: [tlId], references: [id])
+  //🔹 Assigned Team Lead
+  tlId     Int?
+  teamLead User? @relation("ProjectTeamLead", fields: [tlId], references: [id])
 
-  // 🔹 Team Members (many-to-many)
+  //🔹 Team Members (many-to-many)
   members ProjectMember[]
 
   createdAt DateTime @default(now())
@@ -73,15 +88,17 @@ model Project {
 }
 
 model ProjectMember {
-  id         Int    @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   userId     Int
   projectId  Int
-  user       User    @relation(fields: [userId], references: [id])
-  project    Project @relation(fields: [projectId], references: [id])
+  role       String?  @db.VarChar(50)
+  notes      String?  @db.Text
+  user       User     @relation(fields: [userId], references: [id])
+  project    Project  @relation(fields: [projectId], references: [id])
   assignedAt DateTime @default(now())
+
   @@unique([userId, projectId])
 }
-
 
 // model Permission {
 //   id       String @id @default(uuid())

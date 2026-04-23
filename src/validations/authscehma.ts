@@ -14,9 +14,9 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters")
+    password: z.string().min(1, "Password is required").min(8, "Password must be at least 8 characters")
         .max(20, "Password must be at most 20 characters"),
-    confirmPassword: z.string().min(1, "Confirm password is required").min(6, "Confirm Password must be at least 6 characters")
+    confirmPassword: z.string().min(1, "Confirm password is required").min(8, "Confirm Password must be at least 8 characters")
         .max(20, "Confirm Password must be at most 20 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -25,9 +25,9 @@ export const registerSchema = z.object({
 
 
 export const resetPasswordSchema = z.object({
-    password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters")
+    password: z.string().min(1, "Password is required").min(8, "Password must be at least 8 characters")
         .max(20, "Password must be at most 20 characters"),
-    confirmPassword: z.string().min(1, "Confirm password is required").min(6, "Confirm Password must be at least 6 characters")
+    confirmPassword: z.string().min(1, "Confirm password is required").min(8, "Confirm Password must be at least 8 characters")
         .max(20, "Confirm Password must be at most 20 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -37,9 +37,9 @@ export const resetPasswordSchema = z.object({
 export const addUserSchema = z.object({
     name: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters")
+    password: z.string().min(1, "Password is required").min(8, "Password must be at least 8 characters")
         .max(20, "Password must be at most 20 characters"),
-    confirmPassword: z.string().min(1, "Confirm password is required").min(6, "Confirm Password must be at least 6 characters")
+    confirmPassword: z.string().min(1, "Confirm password is required").min(8, "Confirm Password must be at least 8 characters")
         .max(20, "Confirm Password must be at most 20 characters"),
     role: z.enum(["USER", "ADMIN"]),
 }).refine((data) => data.password === data.confirmPassword, {

@@ -61,20 +61,20 @@ export default async function DashboardPage() {
                 soft: "bg-emerald-50/80",
             },
         },
-        // {
-        //     title: "Pending Project",
-        //     count: 0,
-        //     icon: TriangleAlert,
-        //     note: `${1}% of board is overdue`,
-        //     tone: {
-        //         icon: "text-rose-700",
-        //         ring: "ring-rose-200",
-        //         glow: "from-rose-100/85 via-rose-50/30 to-transparent",
-        //         bar: "bg-rose-600",
-        //         badge: "bg-rose-50 text-rose-700 border-rose-200",
-        //         soft: "bg-rose-50/80",
-        //     },
-        // },
+        {
+            title: "Overdue Project",
+            count: 0,
+            icon: TriangleAlert,
+            note: `${0}% of board is overdue`,
+            tone: {
+                icon: "text-rose-700",
+                ring: "ring-rose-200",
+                glow: "from-rose-100/85 via-rose-50/30 to-transparent",
+                bar: "bg-rose-600",
+                badge: "bg-rose-50 text-rose-700 border-rose-200",
+                soft: "bg-rose-50/80",
+            },
+        },
     ];
 
     return (
@@ -110,23 +110,20 @@ export default async function DashboardPage() {
                                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${card.tone.badge}`}>
                                         {Math.round(percentage)}%
                                     </span>
-
                                 </div>
 
-                                {card.title !== "Total Users" && (
-                                    <div className="mt-3">
-                                        <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-neutral-500">
-                                            <span>Progress</span>
-                                            <span>{Math.round(percentage)}%</span>
-                                        </div>
-                                        <div className="h-2 w-full rounded-full bg-white/70">
-                                            <div
-                                                className={`h-2.5 rounded-full ${card.tone.bar} transition-all duration-500`}
-                                                style={{ width: `${percentage}%` }}
-                                            />
-                                        </div>
+                                <div className="mt-3">
+                                    <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-neutral-500">
+                                        <span>Progress</span>
+                                        <span>{Math.round(percentage)}%</span>
                                     </div>
-                                )}
+                                    <div className="h-2 w-full rounded-full bg-white/70">
+                                        <div
+                                            className={`h-2.5 rounded-full ${card.tone.bar} transition-all duration-500`}
+                                            style={{ width: `${percentage}%` }}
+                                        />
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                     );

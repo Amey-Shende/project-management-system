@@ -13,7 +13,7 @@ import {
     SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { handleLogout } from "@/lib/utils";
-import { LayoutDashboard, ListChecks, LogOutIcon, Users, User, LucideIcon, ShieldCheck, BriefcaseBusiness, Briefcase, LogOut } from "lucide-react"
+import { LayoutDashboard, ListChecks, LogOutIcon, Users, User, LucideIcon, ShieldCheck, BriefcaseBusiness, Briefcase, LogOut, Folder } from "lucide-react"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Dynamischlogo from "../../public/mobile_nav_logo.svg";
@@ -151,6 +151,11 @@ const menuItems: Array<{
             label: "Team Member",
             icon: Users, // 🔥 better than User
         },
+        {
+            href: "/dashboard/projects",
+            label: "Projects",
+            icon: Folder,
+        },
     ];
 
 export function AppSidebar({ user }: { user: { role: string } | null }) {
@@ -179,7 +184,7 @@ export function AppSidebar({ user }: { user: { role: string } | null }) {
                             src={Dynamischlogo}
                             width={22}
                             height={22}
-                            className="object-contain"
+                            className="object-contain h-5"
                         />
                         <span className="font-semibold text-[16px] text-[#29447A]">
                             Dynamisch
@@ -189,7 +194,7 @@ export function AppSidebar({ user }: { user: { role: string } | null }) {
             </SidebarHeader>
 
             <SidebarContent className="px-2">
-                <SidebarGroup className="pt-0">
+                <SidebarGroup className="pt-1">
                     <SidebarGroupLabel className="text-xs text-gray-400 uppercase tracking-wide px-2 mb-1">
                         Main Navigation
                     </SidebarGroupLabel>
@@ -206,10 +211,10 @@ export function AppSidebar({ user }: { user: { role: string } | null }) {
                                             asChild
                                             isActive={isActive}
                                             className={`
-                                                flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all
+                                                flex items-center gap-3  py-2 text-sm font-medium transition-all
                                                 ${isActive
-                                                    ? "bg-blue-50 text-blue-600 border-l-4 border-blue-600"
-                                                    : "text-gray-600 hover:bg-gray-100"
+                                                    ? "bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-2.5"
+                                                    : "text-gray-600 hover:bg-gray-100 px-3.5"
                                                 }
                                             `}
                                         >
