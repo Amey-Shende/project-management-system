@@ -19,7 +19,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "name",
     label: "Name",
-    width: "w-[20%]",
+    width: "w-[18%]",
     minWidth: "min-w-[130px]",
     renderCell: (user) => (
       <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "email",
     label: "Email",
-    width: "w-[22%]",
+    width: "w-[20%]",
     renderCell: (user) => (
       <p className="flex items-center gap-2 truncate text-sm">
         <Mail className="h-4 w-4 shrink-0 text-muted-foreground mt-1" />
@@ -69,20 +69,18 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "projects_managed",
-    label: "Projects Managed",
+    key: "pm",
+    label: "Project Manager",
     width: "w-[15%]",
     renderCell: (user) => (
-      <div className="flex items-center justify-center">
-        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mr-3">
-          {user.leadProjects?.length || 0}
-        </span>
+      <div className="text-sm">
+        {user.manager?.name || <div className="ms-2">-</div>}
       </div>
     ),
   },
   {
-    key: "team_size",
-    label: "Team Size",
+    key: "teamMembersCount",
+    label: "Team Members",
     width: "w-[12%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -92,19 +90,36 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "report_to",
-    label: "Report To",
-    width: "w-[15%]",
+    key: "projectsCount",
+    label: "Projects",
+    width: "w-[12%]",
     renderCell: (user) => (
-      <div className="text-sm">
-        {user.manager?.name || <div className="ms-8">-</div>}
+      <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+        <FolderKanban className="h-3.5 w-3.5" />
+        {user.leadProjects?.length || 0}
+      </div>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    width: "w-[10%]",
+    renderCell: (user) => (
+      <div
+        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+          user.isActive
+            ? "bg-green-100 text-green-700"
+            : "bg-gray-100 text-gray-700"
+        }`}
+      >
+        {user.isActive ? "Active" : "Inactive"}
       </div>
     ),
   },
   {
     key: "action",
     label: "Actions",
-    width: "w-[10%]",
+    width: "w-[8%]",
     align: "center",
   },
 ];

@@ -39,6 +39,9 @@ const baseSchema = z.object({
   status: z.enum(["ACTIVE", "COMPLETED"]),
   pmId: z.number().optional().nullable(),
   tlId: z.number().optional().nullable(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  teamMembers: z.array(z.number()).optional(),
 });
 
 // For creation: All fields required except description and tlId
@@ -67,6 +70,9 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    teamMembers?: number[];
   }) => Promise<void>;
   onUpdate: (projectData: {
     id: number;
@@ -75,6 +81,9 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    teamMembers?: number[];
   }) => Promise<void>;
   addDialog?: {
     title: string;
@@ -88,6 +97,7 @@ interface User {
   id: number;
   name: string;
   email: string;
+  managerId?: number | null;
 }
 
 export function ProjectDialog({
@@ -106,6 +116,8 @@ export function ProjectDialog({
 
   const [projectManagers, setProjectManagers] = useState<User[]>([]);
   const [teamLeads, setTeamLeads] = useState<User[]>([]);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [filteredTeamMembers, setFilteredTeamMembers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
 
@@ -118,12 +130,11 @@ export function ProjectDialog({
       status: "ACTIVE",
       pmId: undefined,
       tlId: undefined,
+      startDate: "",
+      endDate: "",
+      teamMembers: [],
     },
   });
-
-  // const assignProjectManager = projectManagers?.find(
-  //   (pm) => pm.id === form.getValues("pmId"),
-  // );
 
   useEffect(() => {
     if (project && open) {
@@ -133,6 +144,9 @@ export function ProjectDialog({
         status: project.status,
         pmId: project.pmId,
         tlId: project.tlId || undefined,
+        startDate: project.startDate ? new Date(project.startDate as string | Date).toISOString().split('T')[0] : "",
+        endDate: project.endDate ? new Date(project.endDate as string | Date).toISOString().split('T')[0] : "",
+        teamMembers: [],
       });
     } else if (open) {
       form.reset({
@@ -141,6 +155,9 @@ export function ProjectDialog({
         status: "ACTIVE",
         pmId: 0,
         tlId: undefined,
+        startDate: "",
+        endDate: "",
+        teamMembers: [],
       });
     }
   }, [project, open, form]);
@@ -150,12 +167,15 @@ export function ProjectDialog({
       if (!open) return;
       setLoadingUsers(true);
       try {
-        const [pmRes, tlRes] = await Promise.all([
+        const [pmRes, tlRes, tmRes] = await Promise.all([
           api.get("/users?role=PM"),
           api.get("/users?role=TL"),
+          api.get("/users?role=TM"),
         ]);
         setProjectManagers(pmRes.data.data);
         setTeamLeads(tlRes.data.data);
+        setTeamMembers(tmRes.data.data);
+        setFilteredTeamMembers(tmRes.data.data);
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -170,6 +190,16 @@ export function ProjectDialog({
     formState: { isSubmitting },
   } = form;
 
+  // Handle TL change to filter team members
+  const handleTLChange = (tlId: number | undefined) => {
+    if (tlId) {
+      const filtered = teamMembers.filter((tm) => tm.managerId === tlId);
+      setFilteredTeamMembers(filtered);
+    } else {
+      setFilteredTeamMembers(teamMembers);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     if (project?.id) {
       await onUpdate({
@@ -177,6 +207,9 @@ export function ProjectDialog({
         id: project.id,
         pmId: (data as UpdateFormData).pmId ?? undefined,
         tlId: (data as UpdateFormData).tlId ?? undefined,
+        startDate: (data as UpdateFormData).startDate ? new Date((data as UpdateFormData).startDate as string) : undefined,
+        endDate: (data as UpdateFormData).endDate ? new Date((data as UpdateFormData).endDate as string) : undefined,
+        teamMembers: (data as UpdateFormData).teamMembers,
       });
     } else {
       const createData = data as CreateFormData;
@@ -186,6 +219,9 @@ export function ProjectDialog({
         status: createData.status,
         pmId: createData.pmId ?? undefined,
         tlId: createData.tlId ?? undefined,
+        startDate: createData.startDate ? new Date(createData.startDate as string) : undefined,
+        endDate: createData.endDate ? new Date(createData.endDate as string) : undefined,
+        teamMembers: createData.teamMembers,
       });
     }
     onOpenChange(false);
@@ -337,7 +373,10 @@ export function ProjectDialog({
                     <FieldLabel htmlFor="tlId">Team Lead</FieldLabel>
                     <Select
                       value={field.value ? String(field.value) : undefined}
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => {
+                        field.onChange(Number(value));
+                        handleTLChange(Number(value));
+                      }}
                     >
                       <SelectTrigger className="w-full h-10!">
                         <SelectValue placeholder="Select Team Lead" />
@@ -368,6 +407,80 @@ export function ProjectDialog({
                 )}
               />
             </div>
+
+            {/* Date Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <Controller
+                name="startDate"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="startDate">Start Date</FieldLabel>
+                    <Input
+                      {...field}
+                      id="startDate"
+                      type="date"
+                      className="h-10"
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
+              <Controller
+                name="endDate"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="endDate">End Date</FieldLabel>
+                    <Input
+                      {...field}
+                      id="endDate"
+                      type="date"
+                      className="h-10"
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
+            </div>
+
+            {/* Team Members Multi-Select */}
+            <Controller
+              name="teamMembers"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="teamMembers">Team Members</FieldLabel>
+                  <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
+                    {loadingUsers ? (
+                      <p className="text-sm text-muted-foreground">Loading team members...</p>
+                    ) : filteredTeamMembers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No team members available</p>
+                    ) : (
+                      filteredTeamMembers.map((tm) => (
+                        <label key={tm.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={field.value?.includes(tm.id) || false}
+                            onChange={(e) => {
+                              const currentValue = field.value || [];
+                              if (e.target.checked) {
+                                field.onChange([...currentValue, tm.id]);
+                              } else {
+                                field.onChange(currentValue.filter((id) => id !== tm.id));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="text-sm">{tm.name}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
           </FieldGroup>
         </form>
 

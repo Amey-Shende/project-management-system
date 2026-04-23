@@ -92,6 +92,79 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
     }
     const { role } = parsedPayload.data;
 
+    // For Project Managers, fetch with project statistics from project table
+    if (role === "PM") {
+        const users = await prisma.user.findMany({
+            where: {
+                role: "PM",
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                managerId: true,
+                designation: true,
+                department: true,
+                phone: true,
+                skills: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+                manager: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                subordinates: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                _count: {
+                    select: {
+                        subordinates: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+
+        // Fetch project statistics for each PM
+        const usersWithProjectStats = await Promise.all(
+            users.map(async (user) => {
+                const projects = await prisma.project.findMany({
+                    where: { pmId: user.id },
+                    select: {
+                        id: true,
+                        name: true,
+                        status: true,
+                    },
+                });
+
+                const activeProjects = projects.filter((p) => p.status === "ACTIVE").length;
+                const completedProjects = projects.filter((p) => p.status === "COMPLETED").length;
+
+                return {
+                    ...user,
+                    managedProjects: projects,
+                    totalProjects: projects.length,
+                    activeProjects,
+                    completedProjects,
+                };
+            })
+        );
+
+        return usersWithProjectStats;
+    }
+
+    // For other roles, use the standard select
     const users = await prisma.user.findMany({
         where: {
             ...(role ? { role } : {}),
@@ -315,4 +388,71 @@ export async function deleteUserService(payload: { id: number }) {
     });
 
     return { message: "User deleted successfully" };
+}
+
+export async function getProjectManagerDetailService(id: number) {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            manager: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            subordinates: {
+                where: {
+                    isActive: true,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    subordinates: {
+                        where: {
+                            isActive: true,
+                        },
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!user || user.role !== "PM") {
+        throw new ServiceError("Project Manager not found", 404);
+    }
+
+    // Fetch projects managed by this PM
+    const projects = await prisma.project.findMany({
+        where: { pmId: id },
+        include: {
+            teamLead: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            _count: {
+                select: {
+                    members: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+
+    return {
+        ...user,
+        projects,
+        activeProjects: projects.filter((p) => p.status === "ACTIVE").length,
+        completedProjects: projects.filter((p) => p.status === "COMPLETED").length,
+    };
 }

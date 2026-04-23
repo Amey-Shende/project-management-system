@@ -71,51 +71,45 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "assigned_project",
-    label: "Assigned Project",
+    key: "teamLead",
+    label: "Team Lead",
     width: "w-[15%]",
-    renderCell: (user) => {
-      const project = user.memberProjects?.[0]?.project;
-      if (!project) {
-        return <div className="text-sm text-center pr-4">-</div>;
-      }
-      const projectName = project.name?.trim();
-      const isLong = projectName?.length >= 40;
-
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="text-sm truncate min-w-0 max-w-[150px]">
-              {isLong ? `${projectName.slice(0, 40)}...` : projectName}
-            </div>
-          </TooltipTrigger>
-          {isLong && <TooltipContent>{projectName}</TooltipContent>}
-        </Tooltip>
-      );
-    },
-  },
-  {
-    key: "designation",
-    label: "Designation",
-    width: "w-[15%]",
-    renderCell: (user) => (
-      <div className="text-sm">{user?.designation || "Software Engineer"}</div>
-    ),
-  },
-  {
-    key: "report_to",
-    label: "Report To",
-    width: "w-[12%]",
     renderCell: (user) => {
       const manager = user.manager;
       if (!manager) {
-        return <div className="text-sm text-center pr-5">-</div>;
+        return <div className="text-sm text-center pr-4">-</div>;
       }
       return (
-        // href={`/dashboard/team-member/${manager.id}`}
         <span className="text-sm">{manager.name}</span>
       );
     },
+  },
+  {
+    key: "projectCount",
+    label: "Project Count",
+    width: "w-[12%]",
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+        <Briefcase className="h-3.5 w-3.5" />
+        {user.memberProjects?.length || 0}
+      </div>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    width: "w-[12%]",
+    renderCell: (user) => (
+      <div
+        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+          user.isActive
+            ? "bg-green-100 text-green-700"
+            : "bg-gray-100 text-gray-700"
+        }`}
+      >
+        {user.isActive ? "Active" : "Inactive"}
+      </div>
+    ),
   },
   {
     key: "action",

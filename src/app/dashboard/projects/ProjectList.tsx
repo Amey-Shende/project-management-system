@@ -2,7 +2,7 @@
 
 import Table, { TableColumn } from "@/components/Table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProjectFilter } from "./ProjectFilter";
 import { ProjectDialog } from "./ProjectDialog";
 import { Briefcase, User, Users, Calendar } from "lucide-react";
@@ -18,6 +18,10 @@ export interface Project extends Record<string, unknown> {
   status: "ACTIVE" | "COMPLETED";
   pmId?: number | null;
   tlId?: number | null;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
   projectManager?: {
     id: number;
     name: string;
@@ -150,15 +154,46 @@ const columns: TableColumn<Project>[] = [
       </div>
     ),
   },
+  // {
+  //   key: "startDate",
+  //   label: "Start Date",
+  //   width: "w-[10%]",
+  //   renderCell: (project) => (
+  //     <div className="text-sm text-muted-foreground">
+  //       {project.startDate
+  //         ? new Date(project.startDate as string).toLocaleDateString("en-GB", {
+  //             day: "2-digit",
+  //             month: "2-digit",
+  //             year: "numeric",
+  //           })
+  //         : "-"}
+  //     </div>
+  //   ),
+  // },
+  // {
+  //   key: "endDate",
+  //   label: "End Date",
+  //   width: "w-[10%]",
+  //   renderCell: (project) => (
+  //     <div className="text-sm text-muted-foreground">
+  //       {project.endDate
+  //         ? new Date(project.endDate as string).toLocaleDateString("en-GB", {
+  //             day: "2-digit",
+  //             month: "2-digit",
+  //             year: "numeric",
+  //           })
+  //         : "-"}
+  //     </div>
+  //   ),
+  // },
   {
-    key: "createdAt",
-    label: "Created",
+    key: "updatedAt",
+    label: "Updated",
     width: "w-[10%]",
     renderCell: (project) => (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Calendar className="h-3.5 w-3.5" />
-        {project.createdAt
-          ? new Date(project.createdAt as string).toLocaleDateString("en-GB", {
+      <div className="text-sm text-muted-foreground">
+        {project.updatedAt
+          ? new Date(project.updatedAt as string).toLocaleDateString("en-GB", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -170,7 +205,7 @@ const columns: TableColumn<Project>[] = [
   {
     key: "action",
     label: "Actions",
-    width: "w-[10%]",
+    width: "w-[8%]",
     align: "center",
   },
 ];
@@ -183,18 +218,56 @@ function ProjectList({ initialData }: ProjectListProps) {
   const [projects, setProjects] = useState<Project[]>(initialData);
   const [editingProject, setEditingProject] = useState<Project | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // console.log("initialData", initialData);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [pmFilter, setPMFilter] = useState("all");
+  const [projectManagers, setProjectManagers] = useState<Array<{ id: number; name: string }>>([]);
 
-  const fetchProjects = async () => {
+  console.log("initialData", initialData);
+  const fetchProjects = async (filters?: { search?: string; status?: string; pmId?: string }) => {
     try {
-      const res = await api.get("/project");
+      const params = new URLSearchParams();
+      if (filters?.status && filters.status !== "all") {
+        params.append("status", filters.status);
+      }
+      if (filters?.pmId && filters.pmId !== "all") {
+        params.append("pmId", filters.pmId);
+      }
+      const queryString = params.toString();
+      const url = queryString ? `/project?${queryString}` : "/project";
+      const res = await api.get(url);
       if (res.status !== 200) throw new Error("Failed to fetch projects");
-      setProjects(res.data.data);
+      let fetchedProjects = res.data.data;
+      
+      // Client-side search filtering
+      if (filters?.search) {
+        const searchLower = filters.search.toLowerCase();
+        fetchedProjects = fetchedProjects.filter((project: Project) =>
+          project.name.toLowerCase().includes(searchLower) ||
+          (project.description && project.description.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      setProjects(fetchedProjects);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to fetch projects");
     }
   };
+
+  const fetchProjectManagers = async () => {
+    try {
+      const res = await api.get("/users?role=PM");
+      if (res.status !== 200) throw new Error("Failed to fetch project managers");
+      setProjectManagers(res.data.data);
+    } catch (error) {
+      console.error("Error fetching project managers:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectManagers();
+  }, []);
 
   const handleUpdateProject = async (projectData: {
     id: number;
@@ -203,12 +276,15 @@ function ProjectList({ initialData }: ProjectListProps) {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    teamMembers?: number[];
   }) => {
     try {
       const { id, ...data } = projectData;
       const res = await api.patch(`/project/${id}`, data);
       if (res.status !== 200) throw new Error("Failed to update project");
-      await fetchProjects();
+      await fetchProjects({ search: searchQuery, status: statusFilter, pmId: pmFilter });
       toast.success("Project updated successfully");
     } catch (error) {
       console.error("Error updating project:", error);
@@ -220,7 +296,7 @@ function ProjectList({ initialData }: ProjectListProps) {
     try {
       const res = await api.delete(`/project/${project.id}`);
       if (res.status !== 200) throw new Error("Failed to delete project");
-      await fetchProjects();
+      await fetchProjects({ search: searchQuery, status: statusFilter, pmId: pmFilter });
       toast.success("Project deleted successfully");
     } catch (error) {
       console.error("Error deleting project:", error);
@@ -234,6 +310,9 @@ function ProjectList({ initialData }: ProjectListProps) {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    teamMembers?: number[];
   }) => {
     try {
       const res = await api.post("/project", projectData);
@@ -245,6 +324,21 @@ function ProjectList({ initialData }: ProjectListProps) {
       console.error("Error creating project:", error);
       toast.error("Failed to create project");
     }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    fetchProjects({ search: value, status: statusFilter, pmId: pmFilter });
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    fetchProjects({ search: searchQuery, status: value, pmId: pmFilter });
+  };
+
+  const handlePMChange = (value: string) => {
+    setPMFilter(value);
+    fetchProjects({ search: searchQuery, status: statusFilter, pmId: value });
   };
 
   const handleEditClick = (project: Project) => {
@@ -262,7 +356,16 @@ function ProjectList({ initialData }: ProjectListProps) {
       <div className="p-2.5 h-[calc(100vh-6rem)]">
         <Card className="p-4 h-[calc(100vh-6rem)] bg-white">
           <CardHeader>
-            <ProjectFilter onAddProject={handleAddProject} />
+            <ProjectFilter
+              onAddProject={handleAddProject}
+              onSearchChange={handleSearchChange}
+              onStatusChange={handleStatusChange}
+              onPMChange={handlePMChange}
+              searchValue={searchQuery}
+              statusValue={statusFilter}
+              pmValue={pmFilter}
+              projectManagers={projectManagers}
+            />
           </CardHeader>
           <CardContent className="">
             <Table<Project>
