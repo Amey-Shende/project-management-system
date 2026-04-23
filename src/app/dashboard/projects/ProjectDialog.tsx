@@ -26,6 +26,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -273,6 +274,7 @@ export function ProjectDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
+                          <SelectLabel>Status</SelectLabel>
                           {statusOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
@@ -302,6 +304,7 @@ export function ProjectDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
+                          <SelectLabel>Project Managers</SelectLabel>
                           {loadingUsers ? (
                             <SelectItem value="loading" disabled>
                               Loading...
@@ -341,6 +344,7 @@ export function ProjectDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
+                          <SelectLabel>Team Leads</SelectLabel>
                           {loadingUsers ? (
                             <SelectItem value="loading" disabled>
                               Loading...

@@ -35,6 +35,19 @@ const userSelect = {
             },
         },
     },
+    leadProjects: {
+        select: {
+            id: true,
+            name: true,
+        },
+    },
+    subordinates: {
+        select: {
+            id: true,
+            name: true,
+            email: true,
+        },
+    },
 } as const;
 
 const userWithProjectsSelect = {
@@ -137,14 +150,27 @@ export async function createUserService(payload: CreateUserPayload) {
         select: userSelect,
     });
 
-    // If assignedProjectId is provided, add user to project as member
-    if (assignedProjectId && role === "TM") {
-        await prisma.projectMember.create({
-            data: {
-                userId: user.id,
-                projectId: assignedProjectId,
-            },
-        });
+    // Handle project assignment based on role
+    if (assignedProjectId) {
+        if (role === "TM") {
+            // Add TM as project member
+            await prisma.projectMember.create({
+                data: {
+                    userId: user.id,
+                    projectId: assignedProjectId,
+                    role: "TM",
+                },
+            });
+        } else if (role === "TL") {
+            // Assign TL to project via tlId
+            await prisma.project.update({
+                where: { id: assignedProjectId },
+                data: { 
+                    tlId: user.id,
+                    pmId: user.managerId 
+                },
+            });
+        }
     }
 
     return user;
@@ -213,21 +239,40 @@ export async function updateUserService(payload: Omit<UpdateUserPayload, "id">, 
         select: userSelect,
     });
 
-    // Handle project assignment for TM role
+    // Handle project assignment based on role
     if (assignedProjectId !== undefined) {
-        // Remove existing project memberships
-        await prisma.projectMember.deleteMany({
-            where: { userId: parsedId },
-        });
-
-        // Add new project assignment if provided
-        if (assignedProjectId !== null) {
-            await prisma.projectMember.create({
-                data: {
-                    userId: parsedId,
-                    projectId: assignedProjectId,
-                },
+        if (role === "TM") {
+            // Remove existing project memberships
+            await prisma.projectMember.deleteMany({
+                where: { userId: parsedId },
             });
+
+            // Add new project assignment if provided
+            if (assignedProjectId !== null) {
+                await prisma.projectMember.create({
+                    data: {
+                        userId: parsedId,
+                        projectId: assignedProjectId,
+                    },
+                });
+            }
+        } else if (role === "TL") {
+            // Remove user from any projects they were TL of
+            await prisma.project.updateMany({
+                where: { tlId: parsedId },
+                data: { tlId: null },
+            });
+
+            // Assign TL to new project if provided
+            if (assignedProjectId !== null) {
+                await prisma.project.update({
+                    where: { id: assignedProjectId },
+                    data: {
+                        tlId: parsedId,
+                        pmId: managerId,
+                    },
+                });
+            }
         }
     }
 

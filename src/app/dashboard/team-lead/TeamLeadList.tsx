@@ -4,10 +4,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useState } from "react";
 import { TeamLeadFilter } from "./TeamLeadFilter";
 import { TLDialog } from "./TLDialog";
-import { Mail, UserRound, Briefcase, Users } from "lucide-react";
+import { Mail, UserRound, Briefcase, Users, FolderKanban } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
+import Link from "next/link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const columns: TableColumn<User>[] = [
   {
@@ -28,8 +34,22 @@ const columns: TableColumn<User>[] = [
             .slice(0, 2)
             .toUpperCase()}
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{user.name}</p>
+        <div className="min-w-0 truncate max-w-[176px]">
+          <Link
+            href={`/dashboard/team-lead/${user.id}`}
+            className="truncate text-sm font-semibold hover:underline"
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="truncate">{user.name}</span>
+              </TooltipTrigger>
+              {user.name.length > 23 && (
+                <TooltipContent>
+                  <p>{user.name}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </Link>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <UserRound className="h-3.5 w-3.5" /> Team Lead
           </p>
@@ -40,7 +60,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "email",
     label: "Email",
-    width: "w-[20%]",
+    width: "w-[22%]",
     renderCell: (user) => (
       <p className="flex items-center gap-2 truncate text-sm">
         <Mail className="h-4 w-4 shrink-0 text-muted-foreground mt-1" />
@@ -52,34 +72,34 @@ const columns: TableColumn<User>[] = [
     key: "projects_managed",
     label: "Projects Managed",
     width: "w-[15%]",
-    renderCell: () => (
-      <div className="inline-flex items-center justify-center align-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-        8
+    renderCell: (user) => (
+      <div className="flex items-center justify-center">
+        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mr-3">
+          {user.leadProjects?.length || 0}
+        </span>
       </div>
     ),
   },
   {
     key: "team_size",
     label: "Team Size",
-    width: "w-[10%]",
-    renderCell: () => (
+    width: "w-[12%]",
+    renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
         <Users className="h-3.5 w-3.5" />
-        12
+        {user.subordinates?.length || 0}
       </div>
     ),
   },
-  // {
-  //   key: "experience",
-  //   label: "Experience",
-  //   width: "w-[10%]",
-  //   renderCell: () => <div className="text-sm font-medium">5 years</div>,
-  // },
   {
     key: "report_to",
     label: "Report To",
-    width: "w-[10%]",
-    renderCell: () => <div className="text-sm font-medium">John Doe</div>,
+    width: "w-[15%]",
+    renderCell: (user) => (
+      <div className="text-sm">
+        {user.manager?.name || <div className="ms-8">-</div>}
+      </div>
+    ),
   },
   {
     key: "action",
@@ -94,6 +114,26 @@ export interface User extends Record<string, unknown> {
   name: string;
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
+  password?: string | null;
+  designation: string | null;
+  // department: string | null;
+  phone: string | null;
+  skills: unknown;
+  isActive: boolean;
+  manager?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
+  leadProjects?: Array<{
+    id: number;
+    name: string;
+  }>;
+  subordinates?: Array<{
+    id: number;
+    name: string;
+    email: string;
+  }>;
 }
 
 interface TeamLeadListProps {
@@ -105,6 +145,16 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get("/users?role=TL");
+      if (res.status !== 200) throw new Error("Failed to fetch users");
+      setUsers(res.data.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to fetch users");
+    }
+  };
   const handleUpdateUser = async (user: {
     id: number;
     name: string;
@@ -112,17 +162,18 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
     role: "TL";
     password?: string;
     designation?: string;
-    department?: string;
+    // department?: string;
     phone?: string;
     skills?: string[];
+    managerId?: number | null;
+    assignedProjectId?: number | null;
   }) => {
     try {
       const { password, id, ...userData } = user;
       const res = await api.patch(`/users/${user.id}`, userData);
       if (res.status !== 200) throw new Error("Failed to update user");
-      const data = res.data.data;
-      setUsers(users.map((u) => (u.id === user.id ? data : u)));
       toast.success("Team lead updated successfully");
+      await fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
       toast.error("Failed to update team lead");
@@ -135,6 +186,7 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
       if (res.status !== 200) throw new Error("Failed to delete user");
       setUsers(users.filter((u) => u.id !== user.id));
       toast.success("Team lead deleted successfully");
+      await fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error("Failed to delete team lead");
@@ -147,16 +199,17 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
     role: "TL";
     password: string;
     designation?: string;
-    department?: string;
+    // department?: string;
     phone?: string;
     skills?: string[];
+    managerId?: number | null;
+    assignedProjectId?: number | null;
   }) => {
     try {
       const res = await api.post("/users", { ...user, role: "TL" });
       if (res.status !== 201) throw new Error("Failed to create user");
-      const data = res.data.data;
-      setUsers([...users, data]);
       toast.success("Team lead created successfully");
+      await fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
       toast.error("Failed to create team lead");

@@ -201,7 +201,6 @@ export function TMDialog({
               .filter(Boolean)
           : data.skills,
     };
-    console.log(payload);
     if (user?.id) {
       onUpdate({ ...payload, id: user.id });
     } else {

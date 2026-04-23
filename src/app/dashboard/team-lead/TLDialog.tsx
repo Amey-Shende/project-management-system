@@ -23,22 +23,49 @@ import {
   LockIcon,
   EyeIcon,
   EyeOffIcon,
-  Building2,
   Briefcase,
-  Code2,
   PhoneIcon,
+  FolderKanban,
+  UserRound,
 } from "lucide-react";
 import { z } from "zod";
 import { renderRequired } from "@/lib/renderRequired";
+import api from "@/lib/axios";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const baseSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email(),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(50, "Name must be less than 50 characters"),
+  email: z.string().min(1, "Email is required").email(),
   role: z.literal("TL"),
-  designation: z.string().trim().max(50).optional(),
-  department: z.string().trim().max(50).optional(),
-  phone: z.string().trim().max(20).optional(),
-  skills: z.array(z.string()).optional(),
+  designation: z
+    .string()
+    .trim()
+    .max(50, "Designation must be less than 50 characters")
+    .optional(),
+  // department: z
+  //   .string()
+  //   .trim()
+  //   .max(50, "Department must be less than 50 characters")
+  //   .optional(),
+  phone: z.string().max(10, "Phone must be at most 10 digit").optional(),
+  skills: z.string().optional(),
+  assignedProjectId: z.number().nullable().optional(),
+  managerId: z.number().nullable().optional(),
+});
+
+const updateSchema = baseSchema.extend({
+  password: z.string().trim().min(6).optional().or(z.literal("")),
 });
 
 const createSchema = baseSchema.extend({
@@ -47,10 +74,6 @@ const createSchema = baseSchema.extend({
     .trim()
     .min(6, "Password must be at least 6 characters")
     .max(20, "Password must be at most 20 characters"),
-});
-
-const updateSchema = baseSchema.extend({
-  password: z.string().trim().min(6).optional().or(z.literal("")),
 });
 
 interface TLDialogProps {
@@ -63,9 +86,11 @@ interface TLDialogProps {
     role: "TL";
     password: string;
     designation?: string;
-    department?: string;
+    // department?: string;
     phone?: string;
     skills?: string[];
+    managerId?: number | null;
+    assignedProjectId?: number | null;
   }) => void;
   onUpdate: (userData: {
     id: number;
@@ -74,9 +99,11 @@ interface TLDialogProps {
     role: "TL";
     password?: string;
     designation?: string;
-    department?: string;
+    // department?: string;
     phone?: string;
     skills?: string[];
+    managerId?: number | null;
+    assignedProjectId?: number | null;
   }) => void;
 }
 
@@ -88,9 +115,21 @@ export function TLDialog({
   onUpdate,
 }: TLDialogProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [projectManagers, setProjectManagers] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [projects, setProjects] = useState<
+    {
+      id: number;
+      name: string;
+      projectManager: { id: number; name: string } | null;
+    }[]
+  >([]);
   const isEditMode = !!user?.id;
   const formSchema = user ? updateSchema : createSchema;
   type FormData = z.infer<typeof formSchema>;
+
+  console.log(user);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -101,9 +140,11 @@ export function TLDialog({
       role: "TL",
       password: "",
       designation: "",
-      department: "",
+      // department: "",
       phone: "",
-      skills: [],
+      skills: "",
+      managerId: undefined,
+      assignedProjectId: undefined,
     },
   });
 
@@ -115,9 +156,11 @@ export function TLDialog({
         role: "TL",
         password: "",
         designation: user.designation || "",
-        department: user.department || "",
+        // department: user.department || "",
         phone: user.phone || "",
-        skills: user.skills || [],
+        skills: user.skills?.join(", ") || "",
+        managerId: user.managerId,
+        assignedProjectId: user.leadProjects?.find((p: any) => p.id)?.id || undefined,
       });
     } else if (open) {
       form.reset({
@@ -126,12 +169,37 @@ export function TLDialog({
         role: "TL",
         password: "",
         designation: "",
-        department: "",
+        // department: "",
         phone: "",
-        skills: [],
+        skills: "",
+        managerId: undefined,
+        assignedProjectId: undefined,
       });
     }
   }, [user, open, form]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Both requests start at the same time
+        const [projectRes, projectMangerRes] = await Promise.all([
+          api.get("/project"),
+          api.get("/users?role=PM"),
+        ]);
+        if (projectRes.status === 200) setProjects(projectRes.data?.data);
+        if (projectMangerRes.status === 200)
+          setProjectManagers(projectMangerRes.data?.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
+
+  const assignedProjectId = form.watch("assignedProjectId");
 
   const {
     handleSubmit,
@@ -139,18 +207,39 @@ export function TLDialog({
   } = form;
 
   const onSubmit = (data: FormData) => {
+    const payload = {
+      ...data,
+      skills:
+        typeof data.skills === "string"
+          ? data.skills
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : data.skills,
+    };
+
     if (user?.id) {
-      onUpdate({ ...data, id: user.id });
+      onUpdate({ ...payload, id: user.id });
     } else {
-      onSave(data as any);
+      onSave(payload as any);
     }
     onOpenChange(false);
     form.reset();
   };
 
+  useEffect(() => {
+    if (assignedProjectId && open) {
+      const selectedProjects = projects.filter(
+        (project) => assignedProjectId === project.id,
+      );
+      const projectManager = selectedProjects[0]?.projectManager?.id;
+      form.setValue("managerId", projectManager);
+    }
+  }, [assignedProjectId, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="xs:max-w-[400px] sm:max-w-[600px] md:max-w-[800px] ">
         <DialogHeader>
           <DialogTitle>
             {user ? "Update Team Lead" : "Add Team Lead"}
@@ -168,57 +257,59 @@ export function TLDialog({
           noValidate
           className="space-y-1"
         >
-          <FieldGroup className="gap-5">
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="name"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="name">{renderRequired("Name")}</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <UserIcon className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="name"
-                        placeholder="Enter name"
-                        autoComplete="name"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
+          <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="name">
+                    {renderRequired("Name")}
+                  </FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <UserIcon className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="name"
+                      placeholder="Enter name"
+                      autoComplete="name"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="email">{renderRequired("Email")}</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <MailIcon className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="email"
-                        type="email"
-                        placeholder="Enter email"
-                        autoComplete="email"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
+            <Controller
+              name="email"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="email">
+                    {renderRequired("Email")}
+                  </FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <MailIcon className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      placeholder="Enter email"
+                      autoComplete="email"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
             {!isEditMode && (
               <Controller
@@ -226,7 +317,9 @@ export function TLDialog({
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="relative">
-                    <FieldLabel htmlFor="password">{renderRequired("Password")}</FieldLabel>
+                    <FieldLabel htmlFor="password">
+                      {renderRequired("Password")}
+                    </FieldLabel>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         <LockIcon className="h-4 w-4" />
@@ -269,111 +362,152 @@ export function TLDialog({
                 )}
               />
             )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="designation"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="designation">Designation</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Briefcase className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="designation"
-                        placeholder="Enter designation"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="department"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="department">Department</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Building2 className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="department"
-                        placeholder="Enter department"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="phone"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="phone">Phone</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <PhoneIcon className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter phone number"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="skills"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="skills">
-                      <div className="flex items-center gap-2">
-                        <Code2 className="h-4 w-4" />
-                        Skills (comma separated)
-                      </div>
-                    </FieldLabel>
+            <Controller
+              name="designation"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="designation">Designation</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Briefcase className="h-4 w-4 mt-1" />
+                    </span>
                     <Input
                       {...field}
-                      id="skills"
-                      placeholder="React, Node.js, TypeScript"
+                      id="designation"
+                      placeholder="Enter designation"
                       aria-invalid={fieldState.invalid}
-                      className="h-10"
-                      onChange={(e) => {
-                        const skillsArray = e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter((s) => s.length > 0);
-                        field.onChange(skillsArray);
-                      }}
-                      value={field.value ? field.value.join(", ") : ""}
+                      className="h-10 pl-10"
                     />
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+            <Controller
+              name="phone"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="phone">Phone</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <PhoneIcon className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter phone number"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                      onInput={(e) => {
+                        const input = e.target as HTMLInputElement;
+                        input.value = input.value.replace(/[^0-9]/g, "");
+                      }}
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+            {/* Skills */}
+            <Controller
+              name="skills"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="skills">
+                    <div className="flex items-center gap-2">
+                      {/* <Code2 className="h-4 w-4" /> */}
+                      Key Expertise (comma separated)
+                    </div>
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    className="h-10"
+                    placeholder="Add key expertise like React, JavaScript"
+                    value={field.value}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+            <Controller
+              name="assignedProjectId"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Assign Projects</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
+                      <FolderKanban className="h-4 w-4 mt-1" />
+                    </span>
+                    <Select
+                      value={field.value ? String(field.value) : ""}
+                      onValueChange={(val) =>
+                        field.onChange(val ? Number(val) : undefined)
+                      }
+                      aria-invalid={fieldState.invalid}
+                    >
+                      <SelectTrigger className="h-10! pl-10 w-full">
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Projects</SelectLabel>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            {/* Manager/Project Manager */}
+            <Controller
+              name="managerId"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Report To (Project Manager)</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
+                      <UserRound className="h-4 w-4 mt-1" />
+                    </span>
+                    <Select
+                      value={field.value ? String(field.value) : ""}
+                      onValueChange={(val) =>
+                        field.onChange(val ? Number(val) : undefined)
+                      }
+                      aria-invalid={fieldState.invalid}
+                    >
+                      <SelectTrigger className="h-10! pl-10 w-full">
+                        <SelectValue placeholder="Select project manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Project Managers</SelectLabel>
+                          {projectManagers.map((pm) => (
+                            <SelectItem key={pm.id} value={String(pm.id)}>
+                              {pm.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
           </FieldGroup>
         </form>
 

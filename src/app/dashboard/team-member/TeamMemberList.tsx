@@ -41,18 +41,16 @@ const columns: TableColumn<User>[] = [
             href={`/dashboard/team-member/${user.id}`}
             className="truncate text-sm font-semibold hover:underline"
           >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="truncate">{user.name}</span>
-                </TooltipTrigger>
-                {user.name.length > 23 && (
-                  <TooltipContent>
-                    <p>{user.name}</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="truncate">{user.name}</span>
+              </TooltipTrigger>
+              {user.name.length > 23 && (
+                <TooltipContent>
+                  <p>{user.name}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </Link>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <UserRound className="h-3.5 w-3.5" /> Team Member
@@ -81,19 +79,18 @@ const columns: TableColumn<User>[] = [
       if (!project) {
         return <div className="text-sm text-center pr-4">-</div>;
       }
-      const projectName = project.name;
-      const isLong = projectName.length > 40;
+      const projectName = project.name?.trim();
+      const isLong = projectName?.length >= 40;
+
       return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-sm truncate max-w-[150px]">
-                {isLong ? `${projectName.slice(0, 40)}...` : projectName}
-              </div>
-            </TooltipTrigger>
-            {isLong && <TooltipContent>{projectName}</TooltipContent>}
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-sm truncate min-w-0 max-w-[150px]">
+              {isLong ? `${projectName.slice(0, 40)}...` : projectName}
+            </div>
+          </TooltipTrigger>
+          {isLong && <TooltipContent>{projectName}</TooltipContent>}
+        </Tooltip>
       );
     },
   },
@@ -133,7 +130,6 @@ export interface User extends Record<string, unknown> {
   name: string;
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
-  password?: string | null;
   designation: string | null;
   department: string | null;
   phone: string | null;
@@ -254,17 +250,19 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
             <TeamMemberFilter onAddUser={handleAddUser} />
           </CardHeader>
           <CardContent className="overflow-auto">
-            <Table<User>
-              columns={columns}
-              data={users}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteUser}
-              deleteDialog={{
-                title: "Are you sure you want to delete this Team Member?",
-                description: (row) =>
-                  `"${row.name}" will be removed permanently.`,
-              }}
-            />
+            <TooltipProvider>
+              <Table<User>
+                columns={columns}
+                data={users}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteUser}
+                deleteDialog={{
+                  title: "Are you sure you want to delete this Team Member?",
+                  description: (row) =>
+                    `"${row.name}" will be removed permanently.`,
+                }}
+              />
+            </TooltipProvider>
           </CardContent>
         </Card>
       </div>
