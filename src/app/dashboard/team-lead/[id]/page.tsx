@@ -81,8 +81,8 @@ export default async function TeamLeadDetailPage({
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <CardContent className="-mt-5">
+            <div className="flex justify-end gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
@@ -107,7 +107,7 @@ export default async function TeamLeadDetailPage({
                 Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -137,7 +137,7 @@ export default async function TeamLeadDetailPage({
                 Work Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -148,7 +148,7 @@ export default async function TeamLeadDetailPage({
                 </div>
               </div>
 
-              {/* <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Department</p>
@@ -156,7 +156,7 @@ export default async function TeamLeadDetailPage({
                     {user.department || "N/A"}
                   </p>
                 </div>
-              </div> */}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -172,7 +172,7 @@ export default async function TeamLeadDetailPage({
                   Key Expertise
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="-mt-5">
                 <div className="flex flex-wrap gap-2">
                   {user.skills.map((skill: any, index: number) => (
                     <span
@@ -197,10 +197,10 @@ export default async function TeamLeadDetailPage({
                 Projects Managed
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               {user.leadProjects.map((project: any) => (
                 <div key={project.id} className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
                     {project.name
                       .split(" ")
                       .map((p: string) => p[0])
@@ -209,7 +209,7 @@ export default async function TeamLeadDetailPage({
                       .toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-semibold">{project.name}</p>
+                    <p className="font-semibold text-base">{project.name}</p>
                     <Link
                       href={`/dashboard/projects/${project.id}`}
                       className="text-sm text-blue-600 hover:text-blue-700"
@@ -232,7 +232,7 @@ export default async function TeamLeadDetailPage({
                 Team Members ({user.subordinates.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="-mt-5">
               <div className="grid gap-3">
                 {user.subordinates.map((subordinate: any) => (
                   <div
@@ -240,7 +240,7 @@ export default async function TeamLeadDetailPage({
                     className="flex items-center gap-3 p-3 rounded-lg border"
                   >
                     <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                       style={{
                         backgroundColor: generateColor(
                           subordinate.name,
@@ -283,10 +283,10 @@ export default async function TeamLeadDetailPage({
                 Reports To
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="-mt-5">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold "
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold "
                   style={{
                     backgroundColor: generateColor(
                       user.manager.name,
@@ -304,7 +304,13 @@ export default async function TeamLeadDetailPage({
                 <div>
                   <p className="font-semibold">{user.manager.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {user.manager.email}
+                    {/* {user.manager.email} */}
+                    <Link
+                      href={`/dashboard/project-manager/${user.manager.id}`}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      View Profile
+                    </Link>
                   </p>
                 </div>
               </div>

@@ -231,7 +231,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Organization Hierarchy */}
-            <Card className="border shadow-sm">
+            {/* <Card className="border shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="h-5 w-5 text-emerald-600" />
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
                         <p className="text-sm text-muted-foreground text-center py-8">No organization data available</p>
                     )}
                 </CardContent>
-            </Card>
+            </Card> */}
         </section >
     );
 }

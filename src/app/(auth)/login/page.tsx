@@ -105,7 +105,7 @@ function LoginContent() {
 
     return (
         <main className="relative min-h-screen overflow-hidden">
-            <video
+            {/* <video
                 autoPlay
                 muted
                 loop
@@ -114,7 +114,7 @@ function LoginContent() {
             >
                 <source src="/hero-background.mp4" type="video/mp4" />
             </video>
-            <div className="absolute inset-0 bg-black/4" />
+            <div className="absolute inset-0 bg-black/4" /> */}
 
             <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
                 <div className="w-full max-w-md">
