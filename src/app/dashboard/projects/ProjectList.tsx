@@ -224,6 +224,7 @@ function ProjectList({ initialData }: ProjectListProps) {
   const [projectManagers, setProjectManagers] = useState<Array<{ id: number; name: string }>>([]);
 
   console.log("initialData", initialData);
+
   const fetchProjects = async (filters?: { search?: string; status?: string; pmId?: string }) => {
     try {
       const params = new URLSearchParams();

@@ -10,121 +10,14 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { handleLogout } from "@/lib/utils";
-import { LayoutDashboard, ListChecks, LogOutIcon, Users, User, LucideIcon, ShieldCheck, BriefcaseBusiness, Briefcase, LogOut, Folder } from "lucide-react"
+import { LayoutDashboard, Users, LucideIcon , BriefcaseBusiness, LogOut,FolderKanban } from "lucide-react"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Dynamischlogo from "../../public/mobile_nav_logo.svg";
 import Image from "next/image";
 
-// // Define menu items array
-// const menuItems: Array<{
-//     href: string;
-//     label: string;
-//     icon: LucideIcon;
-//     requiresAdmin?: boolean;
-// }> = [
-//         {
-//             href: "/dashboard",
-//             label: "Dashboard",
-//             icon: LayoutDashboard,
-//             requiresAdmin: false,
-//         },
-//         {
-//             href: "/dashboard/project-manager",
-//             label: "Project Manager",
-//             icon: BriefcaseBusiness,
-//             requiresAdmin: false,
-//         },
-//         {
-//             href: "/dashboard/team-lead",
-//             label: "Team Lead",
-//             icon: ShieldCheck,
-//             requiresAdmin: false,
-//         },
-//         {
-//             href: "/dashboard/team-member",
-//             label: "Team Member",
-//             icon: User,
-//             requiresAdmin: false,
-//         },
-//     ];
-
-// export function AppSidebar({ user }: { user: { role: string } | null }) {
-//     const router = useRouter();
-//     const pathname = usePathname()
-
-//     // Filter menu items based on user role
-//     const visibleMenuItems = menuItems.filter(item => {
-//         if (item.requiresAdmin) {
-//             return user?.role === "ADMIN";
-//         }
-//         return true;
-//     });
-
-//     return (
-//         <Sidebar>
-//             <SidebarHeader>
-//                 <div className="rounded-md  px-2">
-//                     <h1 className="text-sm text-gray-500">Project Management</h1>
-//                     {/* Use flex and items-center to align logo and text horizontally */}
-//                     <div className="flex items-center gap-2 mt-1">
-//                         <Image
-//                             alt="Dynamisch logo"
-//                             src={Dynamischlogo}
-//                             width={20}
-//                             height={20}
-//                             className="object-contain"
-//                         />
-//                         <span className="font-semibold text-[16px] text-[#29447A]">Dynamisch</span>
-//                     </div>
-//                 </div>
-
-
-//             </SidebarHeader>
-//             <SidebarSeparator className="w-[97%]!" />
-//             <SidebarContent className="ps-1">
-//                 <SidebarGroup>
-//                     <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
-//                     <SidebarGroupContent>
-//                         <SidebarMenu>
-//                             {visibleMenuItems.map((item) => {
-//                                 const Icon = item.icon;
-//                                 return (
-//                                     <SidebarMenuItem key={item.href}>
-//                                         <SidebarMenuButton
-//                                             asChild
-//                                             isActive={pathname === item.href}
-//                                         >
-//                                             <Link href={item.href}>
-//                                                 <Icon />
-//                                                 <span>{item.label}</span>
-//                                             </Link>
-//                                         </SidebarMenuButton>
-//                                     </SidebarMenuItem>
-//                                 );
-//                             })}
-//                         </SidebarMenu>
-//                     </SidebarGroupContent>
-//                 </SidebarGroup>
-
-//             </SidebarContent>
-//             <SidebarSeparator className="w-[97%]!" />
-//             <SidebarFooter>
-//                 <SidebarMenuItem>
-//                     <SidebarMenuButton onClick={() => handleLogout(router)}>
-//                         <LogOutIcon />
-//                         <span>Logout</span>
-//                     </SidebarMenuButton>
-//                 </SidebarMenuItem>
-//             </SidebarFooter>
-//         </Sidebar>
-//     )
-// }
-
-// Define menu items array
 const menuItems: Array<{
     href: string;
     label: string;
@@ -144,7 +37,7 @@ const menuItems: Array<{
         {
             href: "/dashboard/team-lead",
             label: "Team Lead",
-            icon: ShieldCheck,
+            icon: Users,
         },
         {
             href: "/dashboard/team-member",
@@ -154,7 +47,7 @@ const menuItems: Array<{
         {
             href: "/dashboard/projects",
             label: "Projects",
-            icon: Folder,
+            icon: FolderKanban,
         },
     ];
 

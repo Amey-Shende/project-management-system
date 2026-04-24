@@ -47,16 +47,17 @@ export async function getProjectsService(payload: GetProjectsPayload = {}) {
         select: {
           id: true,
           name: true,
-          email: true,
-          role: true,
         },
       },
       teamLead: {
         select: {
           id: true,
           name: true,
-          email: true,
-          role: true,
+        },
+      },
+      members: {
+        select: {
+          userId: true,
         },
       },
       _count: {

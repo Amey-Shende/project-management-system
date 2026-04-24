@@ -131,7 +131,7 @@ export interface User extends Record<string, unknown> {
   role: "PM" | "TM" | "TL" | "CEO";
   password?: string | null;
   designation: string | null;
-  // department: string | null;
+  department: string | null;
   phone: string | null;
   skills: unknown;
   isActive: boolean;
@@ -177,7 +177,7 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
     role: "TL";
     password?: string;
     designation?: string;
-    // department?: string;
+    department?: string;
     phone?: string;
     skills?: string[];
     managerId?: number | null;
@@ -214,7 +214,7 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
     role: "TL";
     password: string;
     designation?: string;
-    // department?: string;
+    department?: string;
     phone?: string;
     skills?: string[];
     managerId?: number | null;

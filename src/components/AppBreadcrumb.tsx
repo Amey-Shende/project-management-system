@@ -23,7 +23,9 @@ const pageTitleMap: Record<string, string> = {
 
 const dynamicPagePatterns: Array<{ pattern: RegExp; label: string }> = [
     { pattern: /^\/dashboard\/projects\/\d+$/, label: "Project Detail" },
-    { pattern: /^\/dashboard\/team-member\/\d+$/, label: "Details" },
+    { pattern: /^\/dashboard\/team-member\/\d+$/, label: "Member Detail" },
+    { pattern: /^\/dashboard\/team-lead\/\d+$/, label: "Team Lead Detail" },
+    { pattern: /^\/dashboard\/project-manager\/\d+$/, label: "Project Manager Detail" },
 ];
 
 function AppBreadcrumb() {

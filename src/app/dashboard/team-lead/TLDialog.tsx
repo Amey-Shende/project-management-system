@@ -53,11 +53,11 @@ const baseSchema = z.object({
     .trim()
     .max(50, "Designation must be less than 50 characters")
     .optional(),
-  // department: z
-  //   .string()
-  //   .trim()
-  //   .max(50, "Department must be less than 50 characters")
-  //   .optional(),
+  department: z
+    .string()
+    .trim()
+    .max(50, "Department must be less than 50 characters")
+    .optional(),
   phone: z.string().max(10, "Phone must be at most 10 digit").optional(),
   skills: z.string().optional(),
   assignedProjectId: z.number().nullable().optional(),
@@ -86,7 +86,7 @@ interface TLDialogProps {
     role: "TL";
     password: string;
     designation?: string;
-    // department?: string;
+    department?: string;
     phone?: string;
     skills?: string[];
     managerId?: number | null;
@@ -99,7 +99,7 @@ interface TLDialogProps {
     role: "TL";
     password?: string;
     designation?: string;
-    // department?: string;
+    department?: string;
     phone?: string;
     skills?: string[];
     managerId?: number | null;
@@ -140,7 +140,7 @@ export function TLDialog({
       role: "TL",
       password: "",
       designation: "",
-      // department: "",
+      department: "",
       phone: "",
       skills: "",
       managerId: undefined,
@@ -156,7 +156,7 @@ export function TLDialog({
         role: "TL",
         password: "",
         designation: user.designation || "",
-        // department: user.department || "",
+        department: user.department || "",
         phone: user.phone || "",
         skills: user.skills?.join(", ") || "",
         managerId: user.managerId,
@@ -169,7 +169,7 @@ export function TLDialog({
         role: "TL",
         password: "",
         designation: "",
-        // department: "",
+        department: "",
         phone: "",
         skills: "",
         managerId: undefined,

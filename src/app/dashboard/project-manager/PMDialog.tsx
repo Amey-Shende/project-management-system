@@ -31,12 +31,23 @@ import { z } from "zod";
 import { renderRequired } from "@/lib/renderRequired";
 
 const baseSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email(),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(50, "Name must be less than 50 characters"),
+  email: z.string().min(1, "Email is required").email(),
   role: z.literal("PM"),
-  designation: z.string().trim().max(50).optional(),
-  department: z.string().trim().max(50).optional(),
-  phone: z.string().trim().max(20).optional(),
+  designation: z
+    .string()
+    .trim()
+    .max(50, "Designation must be less than 50 characters")
+    .optional(),
+  department: z
+    .string()
+    .trim()
+    .max(50, "Department must be less than 50 characters")
+    .optional(),
+  phone: z.string().max(10, "Phone must be at most 10 digit").optional(),
 });
 
 const createSchema = baseSchema.extend({
@@ -161,57 +172,59 @@ export function PMDialog({
           noValidate
           className="space-y-1"
         >
-          <FieldGroup className="gap-5">
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="name"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="name">{renderRequired("Name")}</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <UserIcon className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="name"
-                        placeholder="Enter name"
-                        autoComplete="name"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
+          <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="name">
+                    {renderRequired("Name")}
+                  </FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <UserIcon className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="name"
+                      placeholder="Enter name"
+                      autoComplete="name"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="email">{renderRequired("Email")}</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <MailIcon className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="email"
-                        type="email"
-                        placeholder="Enter email"
-                        autoComplete="email"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
+            <Controller
+              name="email"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="email">
+                    {renderRequired("Email")}
+                  </FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <MailIcon className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      placeholder="Enter email"
+                      autoComplete="email"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
             {!isEditMode && (
               <Controller
@@ -219,7 +232,9 @@ export function PMDialog({
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="relative">
-                    <FieldLabel htmlFor="password">{renderRequired("Password")}</FieldLabel>
+                    <FieldLabel htmlFor="password">
+                      {renderRequired("Password")}
+                    </FieldLabel>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         <LockIcon className="h-4 w-4" />
@@ -262,54 +277,51 @@ export function PMDialog({
                 )}
               />
             )}
+            <Controller
+              name="designation"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="designation">Designation</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Briefcase className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="designation"
+                      placeholder="Enter designation"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="designation"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="designation">Designation</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Briefcase className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="designation"
-                        placeholder="Enter designation"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="department"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="department">Department</FieldLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Building2 className="h-4 w-4 mt-1" />
-                      </span>
-                      <Input
-                        {...field}
-                        id="department"
-                        placeholder="Enter department"
-                        aria-invalid={fieldState.invalid}
-                        className="h-10 pl-10"
-                      />
-                    </div>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
+            <Controller
+              name="department"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="department">Department</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Building2 className="h-4 w-4 mt-1" />
+                    </span>
+                    <Input
+                      {...field}
+                      id="department"
+                      placeholder="Enter department"
+                      aria-invalid={fieldState.invalid}
+                      className="h-10 pl-10"
+                    />
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
             <Controller
               name="phone"
@@ -328,6 +340,10 @@ export function PMDialog({
                       placeholder="Enter phone number"
                       aria-invalid={fieldState.invalid}
                       className="h-10 pl-10"
+                      onInput={(e) => {
+                        const input = e.target as HTMLInputElement;
+                        input.value = input.value.replace(/[^0-9]/g, "");
+                      }}
                     />
                   </div>
                   <FieldError errors={[fieldState.error]} />

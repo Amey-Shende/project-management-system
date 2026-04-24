@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useState } from "react";
 import { ProjectMangerFilter } from "./ProjectManagerFilter";
 import { PMDialog } from "./PMDialog";
-import { Mail, UserRound, Users, Briefcase } from "lucide-react";
+import { Mail, UserRound, Users, Briefcase, FolderKanban } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
@@ -72,7 +72,7 @@ const columns: TableColumn<User>[] = [
     width: "w-[10%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
-        <Briefcase className="h-3.5 w-3.5" />
+        <FolderKanban className="h-3.5 w-3.5" />
         {(user as any).totalProjects || 0}
       </div>
     ),

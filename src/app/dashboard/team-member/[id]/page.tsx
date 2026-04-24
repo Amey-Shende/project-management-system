@@ -12,6 +12,7 @@ import {
   Code2,
   CheckCircle,
   XCircle,
+  FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import { getUserByIdService } from "@/services/user.service";
@@ -193,7 +194,7 @@ export default async function TeamMemberDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Briefcase className="h-5 w-5" />
+                <FolderKanban className="h-5 w-5" />
                 Assigned Project
               </CardTitle>
             </CardHeader>
