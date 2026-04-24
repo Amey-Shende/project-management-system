@@ -237,7 +237,7 @@ export default async function TeamLeadDetailPage({
                 {user.subordinates.map((subordinate: any) => (
                   <div
                     key={subordinate.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border"
+                    className="flex items-center gap-3  rounded-lgr"
                   >
                     <div
                       className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
@@ -257,7 +257,7 @@ export default async function TeamLeadDetailPage({
                     </div>
                     <div>
                       <p className="font-semibold">{subordinate.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {subordinate.email}
                       </p>
                     </div>
@@ -303,7 +303,7 @@ export default async function TeamLeadDetailPage({
                 </div>
                 <div>
                   <p className="font-semibold">{user.manager.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground -mt-1">
                     {/* {user.manager.email} */}
                     <Link
                       href={`/dashboard/project-manager/${user.manager.id}`}

@@ -82,7 +82,7 @@ export default async function TeamMemberDetailPage({
             </div>
           </CardHeader>
           <CardContent className="-mt-5">
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <div className="flex justify-end gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
@@ -259,8 +259,13 @@ export default async function TeamMemberDetailPage({
             <CardContent className="-mt-5">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-9 w-9 items-center justify-center rounded-full  text-sm font-semibold "
-                  style={{ backgroundColor: generateColor(user.manager.name, user.manager.id) }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full  text-sm font-semibold "
+                  style={{
+                    backgroundColor: generateColor(
+                      user.manager.name,
+                      user.manager.id,
+                    ),
+                  }}
                 >
                   {user.manager.name
                     .split(" ")
@@ -271,12 +276,14 @@ export default async function TeamMemberDetailPage({
                 </div>
                 <div>
                   <p className="font-semibold">{user.manager.name}</p>
-                  <Link
-                    href={`/dashboard/team-lead/${user.manager.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    View Profile
-                  </Link>
+                  <p className="-mt-1">
+                    <Link
+                      href={`/dashboard/team-lead/${user.manager.id}`}
+                      className="text-sm text-blue-600 hover:text-blue-700 "
+                    >
+                      View Profile
+                    </Link>
+                  </p>
                 </div>
               </div>
             </CardContent>

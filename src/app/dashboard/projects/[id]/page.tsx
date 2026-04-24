@@ -53,8 +53,8 @@ export default async function ProjectDetailPage({
               </p>
             )}
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <CardContent className="-mt-5">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground pt-1">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
@@ -83,7 +83,7 @@ export default async function ProjectDetailPage({
                 Project Manager
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="-mt-5">
               {project.projectManager ? (
                 <div className="flex items-center gap-3">
                   <div
@@ -130,7 +130,7 @@ export default async function ProjectDetailPage({
                 Team Lead
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="-mt-5">
               {project.teamLead ? (
                 <div className="flex items-center gap-3">
                   <div
@@ -174,17 +174,17 @@ export default async function ProjectDetailPage({
               Team Members ({project._count?.members || 0})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="-mt-5">
             {project.members && project.members.length > 0 ? (
               <div className="grid gap-3">
                 {project.members.map((member: any) => (
                   <div
                     key={member.user.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-lg "
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                         style={{
                           backgroundColor: generateColor(
                             member.user.name,
@@ -201,7 +201,7 @@ export default async function ProjectDetailPage({
                       </div>
                       <div>
                         <p className="font-semibold">{member.user.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {member.user.email}
                         </p>
                       </div>

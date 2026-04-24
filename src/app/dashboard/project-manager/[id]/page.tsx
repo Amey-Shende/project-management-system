@@ -202,12 +202,8 @@ export default async function ProjectManagerDetailPage({
             <CardContent className="pt-0 -mt-5">
               <div className="space-y-2">
                 {projects.map((project: any) => (
-                  <Link
-                    key={project.id}
-                    href={`/dashboard/projects/${project.id}`}
-                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-700 shrink-0">
+                  <div key={project.id} className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-700 shrink-0">
                       {project.name
                         .split(" ")
                         .map((p: string) => p[0])
@@ -216,19 +212,29 @@ export default async function ProjectManagerDetailPage({
                         .toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{project.name}</p>
+                      <p className="text-[15px] font-medium truncate">
+                        {project.name}
+                      </p>
+                      <p className="-mt-1">
+                        <Link
+                          href={`/dashboard/projects/${project.id}`}
+                          className="text-xs text-blue-600 hover:text-blue-700"
+                        >
+                          View Detail
+                        </Link>
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap w-20">
                         {project._count.members} members
                       </span>
                       {project.teamLead && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="text-xs whitespace-nowrap w-25">
                           {project.teamLead.name}
                         </span>
                       )}
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap  ${
                           project.status === "ACTIVE"
                             ? "bg-amber-100 text-amber-700"
                             : "bg-gray-100 text-gray-700"
@@ -237,7 +243,7 @@ export default async function ProjectManagerDetailPage({
                         {project.status}
                       </span>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </CardContent>
@@ -254,15 +260,11 @@ export default async function ProjectManagerDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="-mt-5">
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {user.subordinates.map((subordinate: any) => (
-                  <Link
-                    key={subordinate.id}
-                    href={`/dashboard/team-lead/${subordinate.id}`}
-                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 transition-colors"
-                  >
+                  <div key={subordinate.id} className="flex items-center gap-3">
                     <div
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shrink-0"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold shrink-0"
                       style={{
                         backgroundColor: generateColor(
                           subordinate.name,
@@ -278,12 +280,20 @@ export default async function ProjectManagerDetailPage({
                         .toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{subordinate.name}</p>
+                      <p className="font-medium text-[15px] truncate">
+                        {subordinate.name}
+                      </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {subordinate.email}
                       </p>
                     </div>
-                  </Link>
+                    <Link
+                      href={`/dashboard/team-lead/${subordinate.id}`}
+                      className="ml-auto text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
                 ))}
               </div>
             </CardContent>
