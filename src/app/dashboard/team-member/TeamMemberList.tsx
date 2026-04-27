@@ -219,6 +219,7 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
       const res = await api.post("/users", { ...userData, role: "TM" });
       if (res.status !== 201) throw new Error("Failed to create user");
       toast.success("Team member created successfully");
+      console.log(res);
       await fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
@@ -239,11 +240,11 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
   return (
     <section>
       <div className="p-2.5 h-[calc(100vh-6rem)]">
-        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-auto">
+        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-hidden">
           <CardHeader>
             <TeamMemberFilter onAddUser={handleAddUser} />
           </CardHeader>
-          <CardContent className="overflow-auto">
+          <CardContent className="">
             <TooltipProvider>
               <Table<User>
                 columns={columns}

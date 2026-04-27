@@ -92,7 +92,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "projectsCount",
     label: "Projects",
-    width: "w-[12%]",
+    width: "w-[10%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
         <FolderKanban className="h-3.5 w-3.5" />
@@ -244,7 +244,7 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
   return (
     <section>
       <div className="p-2.5 h-[calc(100vh-6rem)]">
-        <Card className="p-4 h-[calc(100vh-6rem)] bg-white">
+        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-hidden">
           <CardHeader>
             <TeamLeadFilter onAddUser={handleAddUser} />
           </CardHeader>

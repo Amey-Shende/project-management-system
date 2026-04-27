@@ -121,8 +121,8 @@ export function ProjectDialog({
   const [projectManagers, setProjectManagers] = useState<User[]>([]);
   const [teamLeads, setTeamLeads] = useState<User[]>([]);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
-  const [filteredTeamMembers, setFilteredTeamMembers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [tlWarning, setTlWarning] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -190,7 +190,6 @@ export function ProjectDialog({
         setProjectManagers(pmRes.data.data);
         setTeamLeads(tlRes.data.data);
         setTeamMembers(tmRes.data.data);
-        setFilteredTeamMembers(tmRes.data.data);
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -205,17 +204,77 @@ export function ProjectDialog({
     formState: { isSubmitting },
   } = form;
 
-  // Handle TL change to filter team members
-  const handleTLChange = (tlId: number | undefined) => {
-    if (tlId) {
-      const filtered = teamMembers.filter((tm) => tm.managerId === tlId);
-      setFilteredTeamMembers(filtered);
+  // Handle PM change to select first subordinate TL
+  const handlePMChange = (pmId: number | undefined) => {
+    if (pmId) {
+      // Find subordinate TLs (TLs where managerId === selected PM ID)
+      const subordinateTLs = teamLeads
+        .filter((tl) => tl.managerId === pmId)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (subordinateTLs.length > 0) {
+        // Select first subordinate TL alphabetically
+        form.setValue("tlId", subordinateTLs[0].id);
+        setTlWarning("");
+
+        // Auto-select TMs under this TL
+        const tmIdsUnderTL = teamMembers
+          .filter((tm) => tm.managerId === subordinateTLs[0].id)
+          .map((tm) => tm.id);
+        form.setValue("teamMembers", tmIdsUnderTL);
+      } else {
+        form.setValue("tlId", undefined);
+        form.setValue("teamMembers", []);
+      }
     } else {
-      setFilteredTeamMembers(teamMembers);
+      form.setValue("tlId", undefined);
+      setTlWarning("");
+      form.setValue("teamMembers", []);
+    }
+  };
+
+  // Handle TL change to show warning if not subordinate and auto-select TMs
+  const handleTLChange = (tlId: number | undefined) => {
+    const pmId = form.getValues("pmId");
+
+    if (tlId) {
+      const selectedTL = teamLeads.find((tl) => tl.id === tlId);
+      const isSubordinate = selectedTL?.managerId === pmId;
+
+      if (pmId && !isSubordinate) {
+        setTlWarning("This Team Lead is not a direct subordinate of the selected Project Manager.");
+      } else {
+        setTlWarning("");
+      }
+
+      // Auto-select TMs that belong to this TL
+      const tmIdsUnderTL = teamMembers
+        .filter((tm) => tm.managerId === tlId)
+        .map((tm) => tm.id);
+      form.setValue("teamMembers", tmIdsUnderTL);
+    } else {
+      setTlWarning("");
+      form.setValue("teamMembers", []);
     }
   };
 
   const onSubmit = async (data: FormData) => {
+    const selectedTlId = data.tlId;
+    const selectedTeamMemberIds = data.teamMembers || [];
+
+    // Update reporting manager for all team members in the project
+    if (selectedTlId && selectedTeamMemberIds.length > 0) {
+      try {
+        await Promise.all(
+          selectedTeamMemberIds.map((memberId) =>
+            api.patch(`/users/${memberId}`, { managerId: selectedTlId })
+          )
+        );
+      } catch (error) {
+        console.error("Error updating reporting managers:", error);
+      }
+    }
+
     if (project?.id) {
       await onUpdate({
         ...(data as UpdateFormData),
@@ -331,7 +390,10 @@ export function ProjectDialog({
                     <FieldLabel htmlFor="pmId">Project Manager</FieldLabel>
                     <Select
                       value={field.value ? String(field.value) : undefined}
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => {
+                        field.onChange(Number(value));
+                        handlePMChange(Number(value));
+                      }}
                     >
                       <SelectTrigger className="w-full h-10!">
                         <SelectValue placeholder="Select Project Manager" />
@@ -366,43 +428,54 @@ export function ProjectDialog({
               <Controller
                 name="tlId"
                 control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="tlId">Team Lead</FieldLabel>
-                    <Select
-                      value={field.value ? String(field.value) : undefined}
-                      onValueChange={(value) => {
-                        field.onChange(Number(value));
-                        handleTLChange(Number(value));
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-10!">
-                        <SelectValue placeholder="Select Team Lead" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Team Leads</SelectLabel>
-                          {loadingUsers ? (
-                            <SelectItem value="loading" disabled>
-                              Loading...
-                            </SelectItem>
-                          ) : teamLeads.length === 0 ? (
-                            <SelectItem value="no-leads" disabled>
-                              No team leads available
-                            </SelectItem>
-                          ) : (
-                            teamLeads.map((tl) => (
-                              <SelectItem key={tl.id} value={String(tl.id)}>
-                                {tl.name}
+                render={({ field, fieldState }) => {
+                  const pmId = form.getValues("pmId");
+                  return (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="tlId">Team Lead</FieldLabel>
+                      <Select
+                        value={field.value ? String(field.value) : undefined}
+                        onValueChange={(value) => {
+                          field.onChange(Number(value));
+                          handleTLChange(Number(value));
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-10!">
+                          <SelectValue placeholder="Select Team Lead" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Team Leads</SelectLabel>
+                            {loadingUsers ? (
+                              <SelectItem value="loading" disabled>
+                                Loading...
                               </SelectItem>
-                            ))
-                          )}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
+                            ) : teamLeads.length === 0 ? (
+                              <SelectItem value="no-leads" disabled>
+                                No team leads available
+                              </SelectItem>
+                            ) : (
+                              teamLeads.map((tl) => {
+                                const isSubordinate = tl.managerId === pmId;
+                                return (
+                                  <SelectItem key={tl.id} value={String(tl.id)}>
+                                    <span className={isSubordinate && pmId ? "font-semibold" : ""}>
+                                      {tl.name}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })
+                            )}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {tlWarning && (
+                        <p className="text-xs text-amber-600 mt-1">{tlWarning}</p>
+                      )}
+                      <FieldError errors={[fieldState.error]} />
+                    </Field>
+                  );
+                }}
               />
 
               {/* Team Members Multi-Select */}
@@ -413,7 +486,7 @@ export function ProjectDialog({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="teamMembers">Team Members</FieldLabel>
                     <MultiSelect
-                      options={filteredTeamMembers.map((tm) => ({
+                      options={teamMembers.map((tm) => ({
                         label: tm.name,
                         value: tm.id,
                       }))}

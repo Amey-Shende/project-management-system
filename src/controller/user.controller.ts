@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleControllerError } from "@/lib/errors";
-import { createUserService, deleteUserService, getUsersService, updateUserService } from "@/services/user.service";
+import { changePasswordService, createUserService, deleteUserService, getUsersService, updateUserService } from "@/services/user.service";
 import { getUserIdFromHeader, parseRole, parseUserId } from "@/lib/utils";
 
 type UserRouteContext = {
@@ -82,5 +82,24 @@ export async function deleteUserByIdController(_request: Request, context: UserR
         return NextResponse.json(result, { status: 200 });
     } catch (error) {
         return handleControllerError(error, "Delete user");
+    }
+}
+
+export async function changePasswordController(request: Request) {
+    try {
+        const body = await request.json();
+        const userId = getUserIdFromHeader(request);
+
+        if (userId === undefined || Number.isNaN(userId)) {
+            return NextResponse.json(
+                { message: "User not authenticated" },
+                { status: 401 },
+            );
+        }
+
+        const result = await changePasswordService(body, userId);
+        return NextResponse.json(result, { status: 200 });
+    } catch (error) {
+        return handleControllerError(error, "Change password");
     }
 }

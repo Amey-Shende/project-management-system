@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ServiceError } from "@/lib/ServiceError";
 import { z } from "zod";
-import { createUserSchema, deleteUserSchema, getUsersSchema, updateUserSchema } from "@/validations/userSchema";
+import { changePasswordSchema, createUserSchema, deleteUserSchema, getUsersSchema, updateUserSchema } from "@/validations/userSchema";
 import { formatValidationMessage } from "@/lib/utils";
 
 const userSelect = {
@@ -207,7 +207,10 @@ export async function createUserService(payload: CreateUserPayload) {
         }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    let hashedPassword: string | null = null;
+    if (password && role !== "TM") {
+        hashedPassword = await bcrypt.hash(password, 10);
+    }
     const user = await prisma.user.create({
         data: {
             name,
@@ -259,7 +262,7 @@ export async function updateUserService(payload: Omit<UpdateUserPayload, "id">, 
         throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid user update data"), 400);
     }
 
-    const { id: parsedId, name, email, password, role, managerId, designation, department, phone, skills, assignedProjectId } = parsedPayload.data;
+    const { id: parsedId, name, email, role, managerId, designation, department, phone, skills, assignedProjectId } = parsedPayload.data;
 
     const existingUser = await prisma.user.findUnique({
         where: { id: parsedId },
@@ -301,7 +304,6 @@ export async function updateUserService(payload: Omit<UpdateUserPayload, "id">, 
         data: {
             ...(name !== undefined ? { name } : {}),
             ...(email !== undefined ? { email } : {}),
-            ...(password !== undefined ? { password: await bcrypt.hash(password, 10) } : {}),
             ...(role !== undefined ? { role } : {}),
             ...(managerId !== undefined ? { managerId } : {}),
             ...(designation !== undefined ? { designation } : {}),
@@ -455,4 +457,46 @@ export async function getProjectManagerDetailService(id: number) {
         activeProjects: projects.filter((p) => p.status === "ACTIVE").length,
         completedProjects: projects.filter((p) => p.status === "COMPLETED").length,
     };
+}
+
+export async function changePasswordService(payload: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}, userId: number) {
+    const parsedPayload = changePasswordSchema.safeParse(payload);
+
+    if (!parsedPayload.success) {
+        throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid password data"), 400);
+    }
+
+    const { currentPassword, newPassword } = parsedPayload.data;
+
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, password: true },
+    });
+
+    if (!user) {
+        throw new ServiceError("User not found", 404);
+    }
+
+    if (!user.password) {
+        throw new ServiceError("User password not found", 404);
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+        throw new ServiceError("Current password is incorrect", 400);
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedNewPassword },
+    });
+
+    return { message: "Password changed successfully" };
 }

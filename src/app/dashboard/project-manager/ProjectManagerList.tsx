@@ -194,7 +194,7 @@ function ProjectManagerList({ initialData }: ProjectManagerListProps) {
   return (
     <section>
       <div className="p-2.5 h-[calc(100vh-6rem)]">
-        <Card className="p-4 h-[calc(100vh-6rem)] bg-white">
+        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-hidden">
           <CardHeader>
             <ProjectMangerFilter onAddUser={handleAddUser} />
           </CardHeader>

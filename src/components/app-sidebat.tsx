@@ -42,7 +42,7 @@ const menuItems: Array<{
         {
             href: "/dashboard/team-member",
             label: "Team Member",
-            icon: Users, // 🔥 better than User
+            icon: Users, 
         },
         {
             href: "/dashboard/projects",
@@ -96,7 +96,7 @@ export function AppSidebar({ user }: { user: { role: string } | null }) {
                         <SidebarMenu className="space-y-1">
                             {visibleMenuItems.map((item) => {
                                 const Icon = item.icon;
-                                const isActive = pathname === item.href;
+                                const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 
                                 return (
                                     <SidebarMenuItem key={item.href}>

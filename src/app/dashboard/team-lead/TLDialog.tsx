@@ -129,8 +129,6 @@ export function TLDialog({
   const formSchema = user ? updateSchema : createSchema;
   type FormData = z.infer<typeof formSchema>;
 
-  console.log(user);
-
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
