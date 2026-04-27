@@ -67,7 +67,7 @@ const ForgotPassword: React.FC = () => {
   return (
     <Suspense fallback={<Loader />}>
       <main className="relative min-h-screen overflow-hidden bg-black">
-        <video
+        {/* <video
           autoPlay
           muted
           loop
@@ -76,7 +76,7 @@ const ForgotPassword: React.FC = () => {
         >
           <source src="/hero-background.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-black/4" />
+        <div className="absolute inset-0 bg-black/4" /> */}
         <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
           <div className="w-full max-w-md">
             <Card className="w-full max-w-md shadow-lg">

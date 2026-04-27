@@ -166,7 +166,7 @@ function Table<T extends Record<string, unknown>>({
     );
 
     return (
-        <div className={`w-full space-y-2 ${className} overflow-auto`}>
+        <div className={`w-full ${className}`}>
             {/* ── Header ── */}
             <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3">
                 {columns.map((col) => (
@@ -181,52 +181,55 @@ function Table<T extends Record<string, unknown>>({
                 ))}
             </div>
 
-            {/* ── Rows ── */}
-            {data.length === 0 ? (
-                emptyState ?? defaultEmpty
-            ) : (
-                data.map((row, rowIndex) => (
-                    <div
-                        key={rowKey ? rowKey(row, rowIndex) : rowIndex}
-                        className={`flex items-center gap-3 rounded-2xl border border-border/70
-                            bg-background px-4 py-3 shadow-sm transition-colors hover:bg-muted/20
-                            ${rowClassName ? rowClassName(row, rowIndex) : ""}`}
-                    >
-                        {columns.map((col) => (
+            {/* ── Rows (Scrollable) ── */}
+            <div className="mt-2 overflow-auto max-h-[calc(100vh-14rem)] scrollbar-thin pb-3">
+                {data.length === 0 ? (
+                    emptyState ?? defaultEmpty
+                ) : (
+                    <div className="space-y-2">
+                        {data.map((row, rowIndex) => (
                             <div
-                                key={`${rowIndex}-${String(col.key)}`}
-                                className={`shrink-0 min-w-0
-                                    ${cellWidthClasses(col)}
-                                    ${alignClass[col.align ?? "left"]}`}
+                                key={rowKey ? rowKey(row, rowIndex) : rowIndex}
+                                className={`flex items-center gap-3 rounded-2xl border border-border/70
+                                    bg-background px-4 py-3 shadow-sm transition-colors hover:bg-muted/20
+                                    ${rowClassName ? rowClassName(row, rowIndex) : ""}`}
                             >
-                                {col.key === "action" ? (
-                                    <ActionTab<T>
-                                        onEdit={onEdit}
-                                        onDelete={onDelete}
-                                        row={row}
-                                        deleteDialog={deleteDialog}
-                                    />
-                                ) : col.renderCell ? (
-                                    col.renderCell(row)
-                                ) : (
-                                    <span className="truncate text-sm text-foreground">
-                                        {row[col.key as keyof T] !== undefined &&
-                                        row[col.key as keyof T] !== null
-                                            ? String(row[col.key as keyof T])
-                                            : "—"}
-                                    </span>
-                                )}
+                                {columns.map((col) => (
+                                    <div
+                                        key={`${rowIndex}-${String(col.key)}`}
+                                        className={`shrink-0 min-w-0
+                                            ${cellWidthClasses(col)}
+                                            ${alignClass[col.align ?? "left"]}`}
+                                    >
+                                        {col.key === "action" ? (
+                                            <ActionTab<T>
+                                                onEdit={onEdit}
+                                                onDelete={onDelete}
+                                                row={row}
+                                                deleteDialog={deleteDialog}
+                                            />
+                                        ) : col.renderCell ? (
+                                            col.renderCell(row)
+                                        ) : (
+                                            <span className="truncate text-sm text-foreground">
+                                                {row[col.key as keyof T] !== undefined &&
+                                                row[col.key as keyof T] !== null
+                                                    ? String(row[col.key as keyof T])
+                                                    : "—"}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>
-                ))
-            )}
+                )}
+            </div>
         </div>
     );
 }
 
 export default Table;
-
 
 // ─────────────────────────────────────────────
 // USAGE EXAMPLE — Project Manager page

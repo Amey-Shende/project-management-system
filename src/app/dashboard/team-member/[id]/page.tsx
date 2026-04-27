@@ -12,6 +12,7 @@ import {
   Code2,
   CheckCircle,
   XCircle,
+  FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import { getUserByIdService } from "@/services/user.service";
@@ -81,8 +82,8 @@ export default async function TeamMemberDetailPage({
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <CardContent className="-mt-5">
+            <div className="flex justify-end gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
@@ -107,7 +108,7 @@ export default async function TeamMemberDetailPage({
                 Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -137,7 +138,7 @@ export default async function TeamMemberDetailPage({
                 Work Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -172,7 +173,7 @@ export default async function TeamMemberDetailPage({
                   Skills
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="-mt-5">
                 <div className="flex flex-wrap gap-2">
                   {user.skills.map((skill: any, index: number) => (
                     <span
@@ -193,13 +194,13 @@ export default async function TeamMemberDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Briefcase className="h-5 w-5" />
+                <FolderKanban className="h-5 w-5" />
                 Assigned Project
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 -mt-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
                   {assignedProject.name
                     .split(" ")
                     .map((p) => p[0])
@@ -220,7 +221,7 @@ export default async function TeamMemberDetailPage({
               {assignedProject.projectManager && (
                 <div className="flex items-center gap-3 pt-4 border-t">
                   <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold"
                     style={{
                       backgroundColor: generateColor(
                         assignedProject.projectManager.name,
@@ -236,7 +237,7 @@ export default async function TeamMemberDetailPage({
                       .toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Project Manager</p>
+                    <p className="font-medium">Project Manager</p>
                     <p className="text-sm text-muted-foreground">
                       {assignedProject.projectManager.name}
                     </p>
@@ -256,11 +257,16 @@ export default async function TeamMemberDetailPage({
                 Reports To
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="-mt-5">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full  text-sm font-semibold "
-                  style={{ backgroundColor: generateColor(user.manager.name, user.manager.id) }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full  text-sm font-semibold "
+                  style={{
+                    backgroundColor: generateColor(
+                      user.manager.name,
+                      user.manager.id,
+                    ),
+                  }}
                 >
                   {user.manager.name
                     .split(" ")
@@ -271,12 +277,14 @@ export default async function TeamMemberDetailPage({
                 </div>
                 <div>
                   <p className="font-semibold">{user.manager.name}</p>
-                  <Link
-                    href={`/dashboard/team-member/${user.manager.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    View Profile
-                  </Link>
+                  <p className="-mt-1">
+                    <Link
+                      href={`/dashboard/team-lead/${user.manager.id}`}
+                      className="text-sm text-blue-600 hover:text-blue-700 "
+                    >
+                      View Profile
+                    </Link>
+                  </p>
                 </div>
               </div>
             </CardContent>

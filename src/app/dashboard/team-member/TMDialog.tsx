@@ -47,6 +47,7 @@ const baseSchema = z.object({
     .max(50, "Name must be less than 50 characters"),
   email: z.string().min(1, "Email is required").email(),
   role: z.literal("TM"),
+  password: z.string().optional(),
   designation: z
     .string()
     .trim()
@@ -115,6 +116,7 @@ export function TMDialog({
       name: "",
       email: "",
       role: "TM",
+      password: "",
       designation: "",
       department: "",
       phone: "",
@@ -130,6 +132,7 @@ export function TMDialog({
         name: user.name,
         email: user.email,
         role: "TM",
+        password: "",
         designation: user.designation || "",
         department: user.department || "",
         phone: user.phone || "",
@@ -144,6 +147,7 @@ export function TMDialog({
         name: "",
         email: "",
         role: "TM",
+        password: "",
         designation: "",
         department: "",
         phone: "",
@@ -191,16 +195,15 @@ export function TMDialog({
   } = form;
 
   const onSubmit = (data: FormData) => {
+    const { password, ...rest } = data;
     const payload = {
-      ...data,
-      skills:
-        typeof data.skills === "string"
-          ? data.skills
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : data.skills,
+      ...rest,
+      password: password && password.trim() ? password : undefined,
+      skills: data.skills
+        ? data.skills.split(",").map((s) => s.trim()).filter(Boolean)
+        : undefined,
     };
+
     if (user?.id) {
       onUpdate({ ...payload, id: user.id });
     } else {

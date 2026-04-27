@@ -16,6 +16,8 @@ const projectSelect = {
   status: true,
   pmId: true,
   tlId: true,
+  startDate: true,
+  endDate: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -45,16 +47,17 @@ export async function getProjectsService(payload: GetProjectsPayload = {}) {
         select: {
           id: true,
           name: true,
-          email: true,
-          role: true,
         },
       },
       teamLead: {
         select: {
           id: true,
           name: true,
-          email: true,
-          role: true,
+        },
+      },
+      members: {
+        select: {
+          userId: true,
         },
       },
       _count: {
@@ -134,7 +137,7 @@ export async function createProjectService(payload: CreateProjectPayload) {
     throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project data"), 400);
   }
 
-  const { name, description, status, pmId, tlId } = parsedPayload.data;
+  const { name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
 
   if (pmId) {
     const projectManager = await prisma.user.findUnique({
@@ -173,9 +176,28 @@ export async function createProjectService(payload: CreateProjectPayload) {
       status: status || "ACTIVE",
       ...(pmId ? { pmId } : {}),
       ...(tlId ? { tlId } : {}),
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(teamMembers && teamMembers.length > 0
+        ? {
+            members: {
+              create: teamMembers.map((userId) => ({
+                userId,
+              })),
+            },
+          }
+        : {}),
     },
     select: projectSelect,
   });
+
+  // Update TL's managerId to PM if both are set
+  if (pmId && tlId) {
+    await prisma.user.update({
+      where: { id: tlId },
+      data: { managerId: pmId },
+    });
+  }
 
   return project;
 }
@@ -190,7 +212,7 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
     throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project update data"), 400);
   }
 
-  const { id: parsedId, name, description, status, pmId, tlId } = parsedPayload.data;
+  const { id: parsedId, name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
 
   const existingProject = await prisma.project.findUnique({
     where: { id: parsedId },
@@ -235,6 +257,24 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
     }
   }
 
+  // Handle team members update
+  if (teamMembers !== undefined) {
+    // Remove existing members
+    await prisma.projectMember.deleteMany({
+      where: { projectId: parsedId },
+    });
+
+    // Add new members if provided
+    if (teamMembers.length > 0) {
+      await prisma.projectMember.createMany({
+        data: teamMembers.map((userId) => ({
+          projectId: parsedId,
+          userId,
+        })),
+      });
+    }
+  }
+
   const project = await prisma.project.update({
     where: { id: parsedId },
     data: {
@@ -243,9 +283,19 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
       ...(status !== undefined ? { status } : {}),
       ...(pmId !== undefined ? { pmId } : {}),
       ...(tlId !== undefined ? { tlId } : {}),
+      ...(startDate !== undefined ? { startDate } : {}),
+      ...(endDate !== undefined ? { endDate } : {}),
     },
     select: projectSelect,
   });
+
+  // Update TL's managerId to PM if both are set
+  if (pmId !== undefined && pmId !== null && tlId !== undefined && tlId !== null) {
+    await prisma.user.update({
+      where: { id: tlId },
+      data: { managerId: pmId },
+    });
+  }
 
   return project;
 }

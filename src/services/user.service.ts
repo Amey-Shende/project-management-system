@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ServiceError } from "@/lib/ServiceError";
 import { z } from "zod";
-import { createUserSchema, deleteUserSchema, getUsersSchema, updateUserSchema } from "@/validations/userSchema";
+import { changePasswordSchema, createUserSchema, deleteUserSchema, getUsersSchema, updateUserSchema } from "@/validations/userSchema";
 import { formatValidationMessage } from "@/lib/utils";
 
 const userSelect = {
@@ -92,6 +92,79 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
     }
     const { role } = parsedPayload.data;
 
+    // For Project Managers, fetch with project statistics from project table
+    if (role === "PM") {
+        const users = await prisma.user.findMany({
+            where: {
+                role: "PM",
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                managerId: true,
+                designation: true,
+                department: true,
+                phone: true,
+                skills: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+                manager: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                subordinates: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                _count: {
+                    select: {
+                        subordinates: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+
+        // Fetch project statistics for each PM
+        const usersWithProjectStats = await Promise.all(
+            users.map(async (user) => {
+                const projects = await prisma.project.findMany({
+                    where: { pmId: user.id },
+                    select: {
+                        id: true,
+                        name: true,
+                        status: true,
+                    },
+                });
+
+                const activeProjects = projects.filter((p) => p.status === "ACTIVE").length;
+                const completedProjects = projects.filter((p) => p.status === "COMPLETED").length;
+
+                return {
+                    ...user,
+                    managedProjects: projects,
+                    totalProjects: projects.length,
+                    activeProjects,
+                    completedProjects,
+                };
+            })
+        );
+
+        return usersWithProjectStats;
+    }
+
+    // For other roles, use the standard select
     const users = await prisma.user.findMany({
         where: {
             ...(role ? { role } : {}),
@@ -134,7 +207,10 @@ export async function createUserService(payload: CreateUserPayload) {
         }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    let hashedPassword: string | null = null;
+    if (password && role !== "TM") {
+        hashedPassword = await bcrypt.hash(password, 10);
+    }
     const user = await prisma.user.create({
         data: {
             name,
@@ -186,7 +262,7 @@ export async function updateUserService(payload: Omit<UpdateUserPayload, "id">, 
         throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid user update data"), 400);
     }
 
-    const { id: parsedId, name, email, password, role, managerId, designation, department, phone, skills, assignedProjectId } = parsedPayload.data;
+    const { id: parsedId, name, email, role, managerId, designation, department, phone, skills, assignedProjectId } = parsedPayload.data;
 
     const existingUser = await prisma.user.findUnique({
         where: { id: parsedId },
@@ -228,7 +304,6 @@ export async function updateUserService(payload: Omit<UpdateUserPayload, "id">, 
         data: {
             ...(name !== undefined ? { name } : {}),
             ...(email !== undefined ? { email } : {}),
-            ...(password !== undefined ? { password: await bcrypt.hash(password, 10) } : {}),
             ...(role !== undefined ? { role } : {}),
             ...(managerId !== undefined ? { managerId } : {}),
             ...(designation !== undefined ? { designation } : {}),
@@ -315,4 +390,113 @@ export async function deleteUserService(payload: { id: number }) {
     });
 
     return { message: "User deleted successfully" };
+}
+
+export async function getProjectManagerDetailService(id: number) {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            manager: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            subordinates: {
+                where: {
+                    isActive: true,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    subordinates: {
+                        where: {
+                            isActive: true,
+                        },
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!user || user.role !== "PM") {
+        throw new ServiceError("Project Manager not found", 404);
+    }
+
+    // Fetch projects managed by this PM
+    const projects = await prisma.project.findMany({
+        where: { pmId: id },
+        include: {
+            teamLead: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            _count: {
+                select: {
+                    members: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+
+    return {
+        ...user,
+        projects,
+        activeProjects: projects.filter((p) => p.status === "ACTIVE").length,
+        completedProjects: projects.filter((p) => p.status === "COMPLETED").length,
+    };
+}
+
+export async function changePasswordService(payload: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}, userId: number) {
+    const parsedPayload = changePasswordSchema.safeParse(payload);
+
+    if (!parsedPayload.success) {
+        throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid password data"), 400);
+    }
+
+    const { currentPassword, newPassword } = parsedPayload.data;
+
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, password: true },
+    });
+
+    if (!user) {
+        throw new ServiceError("User not found", 404);
+    }
+
+    if (!user.password) {
+        throw new ServiceError("User password not found", 404);
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+        throw new ServiceError("Current password is incorrect", 400);
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedNewPassword },
+    });
+
+    return { message: "Password changed successfully" };
 }

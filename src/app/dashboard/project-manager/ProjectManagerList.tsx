@@ -5,16 +5,17 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useState } from "react";
 import { ProjectMangerFilter } from "./ProjectManagerFilter";
 import { PMDialog } from "./PMDialog";
-import { Mail, UserRound } from "lucide-react";
+import { Mail, UserRound, Users, Briefcase, FolderKanban } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
+import Link from "next/link";
 
 const columns: TableColumn<User>[] = [
   {
     key: "name",
     label: "Name",
-    width: "w-[20%]", // ← adjust freely
+    width: "w-[20%]",
     minWidth: "min-w-[130px]",
     renderCell: (user) => (
       <div className="flex items-center gap-3">
@@ -23,14 +24,19 @@ const columns: TableColumn<User>[] = [
           style={{ background: generateColor(user.name, user.id) }}
         >
           {user.name
-            .split(" ") 
+            .split(" ")
             .map((p) => p[0])
             .join("")
             .slice(0, 2)
             .toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{user.name}</p>
+          <Link
+            href={`/dashboard/project-manager/${user.id}`}
+            className="truncate text-sm font-semibold hover:underline"
+          >
+            {user.name}
+          </Link>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <UserRound className="h-3.5 w-3.5" /> Project Manager
           </p>
@@ -41,7 +47,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "email",
     label: "Email",
-    width: "w-[30%]",
+    width: "w-[25%]",
     renderCell: (user) => (
       <p className="flex items-center gap-2 truncate text-sm">
         <Mail className="h-4 w-4 shrink-0 text-muted-foreground mt-1" />
@@ -50,41 +56,51 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "active_projects",
-    label: "Active Projects",
-    width: "w-[10%]",
-    renderCell: () => (
-      <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-        5
+    key: "teamLeadsCount",
+    label: "Team Leads",
+    width: "w-[12%]",
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+        <Users className="h-3.5 w-3.5" />
+        {user.subordinates?.length || 0}
       </div>
     ),
   },
   {
-    key: "manager",
-    label: "Report TO",
-    width: "w-[15%]",
-    renderCell: () => (
-      <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-        2
+    key: "projectsCount",
+    label: "Total Projects",
+    width: "w-[10%]",
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+        <FolderKanban className="h-3.5 w-3.5" />
+        {(user as any).totalProjects || 0}
       </div>
     ),
   },
   {
-    key: "team_size",
-    label: "Team size",
+    key: "activeProjects",
+    label: "Active",
     width: "w-[10%]",
-    renderCell: () => (
-      <div
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold`}
-      >
-        10
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+        {(user as any).activeProjects || 0}
+      </div>
+    ),
+  },
+  {
+    key: "completedProjects",
+    label: "Completed",
+    width: "w-[10%]",
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+        {(user as any).completedProjects || 0}
       </div>
     ),
   },
   {
     key: "action",
     label: "Actions",
-    width: "w-[10%]",
+    width: "w-[8%]",
     align: "center",
   },
 ];
@@ -93,6 +109,11 @@ export interface User extends Record<string, unknown> {
   name: string;
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
+  subordinates?: Array<{ id: number; name: string }>;
+  managedProjects?: Array<{ id: number; name: string; status: string }>;
+  totalProjects?: number;
+  activeProjects?: number;
+  completedProjects?: number;
 }
 
 interface ProjectManagerListProps {
@@ -173,7 +194,7 @@ function ProjectManagerList({ initialData }: ProjectManagerListProps) {
   return (
     <section>
       <div className="p-2.5 h-[calc(100vh-6rem)]">
-        <Card className="p-4 h-[calc(100vh-6rem)] bg-white">
+        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-hidden">
           <CardHeader>
             <ProjectMangerFilter onAddUser={handleAddUser} />
           </CardHeader>

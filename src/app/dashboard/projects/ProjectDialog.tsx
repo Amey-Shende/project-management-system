@@ -17,7 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Folder } from "lucide-react";
+import { Folder, FolderKanban } from "lucide-react";
 import { Project } from "./ProjectList";
 import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,13 +32,20 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/axios";
 import { renderRequired } from "@/lib/renderRequired";
+import { MultiSelect } from "@/components/MultiSelect";
 
-const baseSchema = z.object({ 
-  name: z.string().min(1, "Project name is required").max(100, "Project name must not exceed 100 characters"),
+const baseSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Project name is required")
+    .max(100, "Project name must not exceed 100 characters"),
   description: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED"]),
   pmId: z.number().optional().nullable(),
   tlId: z.number().optional().nullable(),
+  // startDate: z.string().optional(),
+  // endDate: z.string().optional(),
+  teamMembers: z.array(z.number()).optional(),
 });
 
 // For creation: All fields required except description and tlId
@@ -67,6 +74,9 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    // startDate?: Date;
+    // endDate?: Date;
+    teamMembers?: number[];
   }) => Promise<void>;
   onUpdate: (projectData: {
     id: number;
@@ -75,6 +85,9 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
+    // startDate?: Date;
+    // endDate?: Date;
+    teamMembers?: number[];
   }) => Promise<void>;
   addDialog?: {
     title: string;
@@ -88,6 +101,7 @@ interface User {
   id: number;
   name: string;
   email: string;
+  managerId?: number | null;
 }
 
 export function ProjectDialog({
@@ -106,8 +120,9 @@ export function ProjectDialog({
 
   const [projectManagers, setProjectManagers] = useState<User[]>([]);
   const [teamLeads, setTeamLeads] = useState<User[]>([]);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-
+  const [tlWarning, setTlWarning] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -118,29 +133,46 @@ export function ProjectDialog({
       status: "ACTIVE",
       pmId: undefined,
       tlId: undefined,
+      // startDate: "",
+      // endDate: "",
+      teamMembers: [],
     },
   });
 
-  // const assignProjectManager = projectManagers?.find(
-  //   (pm) => pm.id === form.getValues("pmId"),
-  // );
-
   useEffect(() => {
     if (project && open) {
+      // Extract team member IDs from project members
+      const existingTeamMemberIds =
+        project.members?.map((m: any) => m.userId) || [];
+
       form.reset({
         name: project.name,
         description: project.description || "",
         status: project.status,
         pmId: project.pmId,
         tlId: project.tlId || undefined,
+        // startDate: project.startDate
+        //   ? new Date(project.startDate as string | Date)
+        //       .toISOString()
+        //       .split("T")[0]
+        //   : "",
+        // endDate: project.endDate
+        //   ? new Date(project.endDate as string | Date)
+        //       .toISOString()
+        //       .split("T")[0]
+        //   : "",
+        teamMembers: existingTeamMemberIds,
       });
     } else if (open) {
       form.reset({
         name: "",
         description: "",
         status: "ACTIVE",
-        pmId: 0,
+        pmId: undefined,
         tlId: undefined,
+        // startDate: "",
+        // endDate: "",
+        teamMembers: [],
       });
     }
   }, [project, open, form]);
@@ -150,12 +182,14 @@ export function ProjectDialog({
       if (!open) return;
       setLoadingUsers(true);
       try {
-        const [pmRes, tlRes] = await Promise.all([
+        const [pmRes, tlRes, tmRes] = await Promise.all([
           api.get("/users?role=PM"),
           api.get("/users?role=TL"),
+          api.get("/users?role=TM"),
         ]);
         setProjectManagers(pmRes.data.data);
         setTeamLeads(tlRes.data.data);
+        setTeamMembers(tmRes.data.data);
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -170,13 +204,90 @@ export function ProjectDialog({
     formState: { isSubmitting },
   } = form;
 
+  // Handle PM change to select first subordinate TL
+  const handlePMChange = (pmId: number | undefined) => {
+    if (pmId) {
+      // Find subordinate TLs (TLs where managerId === selected PM ID)
+      const subordinateTLs = teamLeads
+        .filter((tl) => tl.managerId === pmId)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (subordinateTLs.length > 0) {
+        // Select first subordinate TL alphabetically
+        form.setValue("tlId", subordinateTLs[0].id);
+        setTlWarning("");
+
+        // Auto-select TMs under this TL
+        const tmIdsUnderTL = teamMembers
+          .filter((tm) => tm.managerId === subordinateTLs[0].id)
+          .map((tm) => tm.id);
+        form.setValue("teamMembers", tmIdsUnderTL);
+      } else {
+        form.setValue("tlId", undefined);
+        form.setValue("teamMembers", []);
+      }
+    } else {
+      form.setValue("tlId", undefined);
+      setTlWarning("");
+      form.setValue("teamMembers", []);
+    }
+  };
+
+  // Handle TL change to show warning if not subordinate and auto-select TMs
+  const handleTLChange = (tlId: number | undefined) => {
+    const pmId = form.getValues("pmId");
+
+    if (tlId) {
+      const selectedTL = teamLeads.find((tl) => tl.id === tlId);
+      const isSubordinate = selectedTL?.managerId === pmId;
+
+      if (pmId && !isSubordinate) {
+        setTlWarning("This Team Lead is not a direct subordinate of the selected Project Manager.");
+      } else {
+        setTlWarning("");
+      }
+
+      // Auto-select TMs that belong to this TL
+      const tmIdsUnderTL = teamMembers
+        .filter((tm) => tm.managerId === tlId)
+        .map((tm) => tm.id);
+      form.setValue("teamMembers", tmIdsUnderTL);
+    } else {
+      setTlWarning("");
+      form.setValue("teamMembers", []);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
+    const selectedTlId = data.tlId;
+    const selectedTeamMemberIds = data.teamMembers || [];
+
+    // Update reporting manager for all team members in the project
+    if (selectedTlId && selectedTeamMemberIds.length > 0) {
+      try {
+        await Promise.all(
+          selectedTeamMemberIds.map((memberId) =>
+            api.patch(`/users/${memberId}`, { managerId: selectedTlId })
+          )
+        );
+      } catch (error) {
+        console.error("Error updating reporting managers:", error);
+      }
+    }
+
     if (project?.id) {
       await onUpdate({
         ...(data as UpdateFormData),
         id: project.id,
         pmId: (data as UpdateFormData).pmId ?? undefined,
         tlId: (data as UpdateFormData).tlId ?? undefined,
+        // startDate: (data as UpdateFormData).startDate
+        //   ? new Date((data as UpdateFormData).startDate as string)
+        //   : undefined,
+        // endDate: (data as UpdateFormData).endDate
+        //   ? new Date((data as UpdateFormData).endDate as string)
+        //   : undefined,
+        teamMembers: (data as UpdateFormData).teamMembers,
       });
     } else {
       const createData = data as CreateFormData;
@@ -186,6 +297,13 @@ export function ProjectDialog({
         status: createData.status,
         pmId: createData.pmId ?? undefined,
         tlId: createData.tlId ?? undefined,
+        // startDate: createData.startDate
+        //   ? new Date(createData.startDate as string)
+        //   : undefined,
+        // endDate: createData.endDate
+        //   ? new Date(createData.endDate as string)
+        //   : undefined,
+        teamMembers: createData.teamMembers,
       });
     }
     onOpenChange(false);
@@ -221,10 +339,12 @@ export function ProjectDialog({
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="name">{renderRequired("Project Name")}</FieldLabel>
+                  <FieldLabel htmlFor="name">
+                    {renderRequired("Project Name")}
+                  </FieldLabel>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Folder className="h-4 w-4 mt-1" />
+                      <FolderKanban className="h-4 w-4 mt-1" />
                     </span>
                     <Input
                       {...field}
@@ -260,34 +380,7 @@ export function ProjectDialog({
               )}
             />
 
-            <div className="grid grid-cols-3 gap-4">
-              {/* Status Field */}
-              <Controller
-                name="status"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="status">Status</FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full h-10!">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Status</SelectLabel>
-                          {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-
+            <div className="grid grid-cols-2 gap-4">
               {/* Project Manager Field */}
               <Controller
                 name="pmId"
@@ -297,7 +390,10 @@ export function ProjectDialog({
                     <FieldLabel htmlFor="pmId">Project Manager</FieldLabel>
                     <Select
                       value={field.value ? String(field.value) : undefined}
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => {
+                        field.onChange(Number(value));
+                        handlePMChange(Number(value));
+                      }}
                     >
                       <SelectTrigger className="w-full h-10!">
                         <SelectValue placeholder="Select Project Manager" />
@@ -332,34 +428,94 @@ export function ProjectDialog({
               <Controller
                 name="tlId"
                 control={form.control}
+                render={({ field, fieldState }) => {
+                  const pmId = form.getValues("pmId");
+                  return (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="tlId">Team Lead</FieldLabel>
+                      <Select
+                        value={field.value ? String(field.value) : undefined}
+                        onValueChange={(value) => {
+                          field.onChange(Number(value));
+                          handleTLChange(Number(value));
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-10!">
+                          <SelectValue placeholder="Select Team Lead" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Team Leads</SelectLabel>
+                            {loadingUsers ? (
+                              <SelectItem value="loading" disabled>
+                                Loading...
+                              </SelectItem>
+                            ) : teamLeads.length === 0 ? (
+                              <SelectItem value="no-leads" disabled>
+                                No team leads available
+                              </SelectItem>
+                            ) : (
+                              teamLeads.map((tl) => {
+                                const isSubordinate = tl.managerId === pmId;
+                                return (
+                                  <SelectItem key={tl.id} value={String(tl.id)}>
+                                    <span className={isSubordinate && pmId ? "font-semibold" : ""}>
+                                      {tl.name}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })
+                            )}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {tlWarning && (
+                        <p className="text-xs text-amber-600 mt-1">{tlWarning}</p>
+                      )}
+                      <FieldError errors={[fieldState.error]} />
+                    </Field>
+                  );
+                }}
+              />
+
+              {/* Team Members Multi-Select */}
+              <Controller
+                name="teamMembers"
+                control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="tlId">Team Lead</FieldLabel>
-                    <Select
-                      value={field.value ? String(field.value) : undefined}
-                      onValueChange={(value) => field.onChange(Number(value))}
-                    >
+                    <FieldLabel htmlFor="teamMembers">Team Members</FieldLabel>
+                    <MultiSelect
+                      options={teamMembers.map((tm) => ({
+                        label: tm.name,
+                        value: tm.id,
+                      }))}
+                      value={field.value || []}
+                      onChange={field.onChange}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
+              {/* Status Field */}
+              <Controller
+                name="status"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="status">Status</FieldLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full h-10!">
-                        <SelectValue placeholder="Select Team Lead" />
+                        <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectLabel>Team Leads</SelectLabel>
-                          {loadingUsers ? (
-                            <SelectItem value="loading" disabled>
-                              Loading...
+                          <SelectLabel>Status</SelectLabel>
+                          {statusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
-                          ) : teamLeads.length === 0 ? (
-                            <SelectItem value="no-leads" disabled>
-                              No team leads available
-                            </SelectItem>
-                          ) : (
-                            teamLeads.map((tl) => (
-                              <SelectItem key={tl.id} value={String(tl.id)}>
-                                {tl.name}
-                              </SelectItem>
-                            ))
-                          )}
+                          ))}
                         </SelectGroup>
                       </SelectContent>
                     </Select>

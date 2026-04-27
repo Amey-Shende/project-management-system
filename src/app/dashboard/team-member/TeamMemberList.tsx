@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useState } from "react";
 import { TeamMemberFilter } from "./TeamMemberFilter";
 import { TMDialog } from "./TMDialog";
-import { Mail, UserRound, Briefcase, Code2 } from "lucide-react";
+import { Mail, UserRound, Briefcase, Code2, FolderKanban } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
@@ -71,51 +71,45 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "assigned_project",
-    label: "Assigned Project",
+    key: "teamLead",
+    label: "Team Lead",
     width: "w-[15%]",
-    renderCell: (user) => {
-      const project = user.memberProjects?.[0]?.project;
-      if (!project) {
-        return <div className="text-sm text-center pr-4">-</div>;
-      }
-      const projectName = project.name?.trim();
-      const isLong = projectName?.length >= 40;
-
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="text-sm truncate min-w-0 max-w-[150px]">
-              {isLong ? `${projectName.slice(0, 40)}...` : projectName}
-            </div>
-          </TooltipTrigger>
-          {isLong && <TooltipContent>{projectName}</TooltipContent>}
-        </Tooltip>
-      );
-    },
-  },
-  {
-    key: "designation",
-    label: "Designation",
-    width: "w-[15%]",
-    renderCell: (user) => (
-      <div className="text-sm">{user?.designation || "Software Engineer"}</div>
-    ),
-  },
-  {
-    key: "report_to",
-    label: "Report To",
-    width: "w-[12%]",
     renderCell: (user) => {
       const manager = user.manager;
       if (!manager) {
-        return <div className="text-sm text-center pr-5">-</div>;
+        return <div className="text-sm text-center pr-4">-</div>;
       }
       return (
-        // href={`/dashboard/team-member/${manager.id}`}
         <span className="text-sm">{manager.name}</span>
       );
     },
+  },
+  {
+    key: "projectCount",
+    label: "Project Count",
+    width: "w-[12%]",
+    renderCell: (user) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+        <FolderKanban className="h-3.5 w-3.5" />
+        {user.memberProjects?.length || 0}
+      </div>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    width: "w-[12%]",
+    renderCell: (user) => (
+      <div
+        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+          user.isActive
+            ? "bg-green-100 text-green-700"
+            : "bg-gray-100 text-gray-700"
+        }`}
+      >
+        {user.isActive ? "Active" : "Inactive"}
+      </div>
+    ),
   },
   {
     key: "action",
@@ -225,6 +219,7 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
       const res = await api.post("/users", { ...userData, role: "TM" });
       if (res.status !== 201) throw new Error("Failed to create user");
       toast.success("Team member created successfully");
+      console.log(res);
       await fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
@@ -245,11 +240,11 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
   return (
     <section>
       <div className="p-2.5 h-[calc(100vh-6rem)]">
-        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-auto">
+        <Card className="p-4 h-[calc(100vh-6rem)] bg-white overflow-hidden">
           <CardHeader>
             <TeamMemberFilter onAddUser={handleAddUser} />
           </CardHeader>
-          <CardContent className="overflow-auto">
+          <CardContent className="">
             <TooltipProvider>
               <Table<User>
                 columns={columns}

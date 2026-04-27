@@ -16,28 +16,32 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { getUserByIdService } from "@/services/user.service";
+import { getProjectManagerDetailService } from "@/services/user.service";
 import { generateColor } from "@/lib/utils";
 import { userRole } from "@/lib/constant";
 
-export default async function TeamLeadDetailPage({
+export default async function ProjectManagerDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getUserByIdService(Number(id));
+  const data = await getProjectManagerDetailService(Number(id));
 
-  if (!user) {
+  if (!data) {
     notFound();
   }
 
+  const { projects, activeProjects, completedProjects, ...user } = data;
+
+  const totalTeamLeads = user.subordinates?.length || 0;
+
   return (
     <div className="p-3">
-      <Link href="/dashboard/team-lead">
+      <Link href="/dashboard/project-manager">
         <Button variant="ghost" className="mb-4 gap-2 cursor-pointer">
           <ArrowLeft className="h-4 w-4" />
-          Back to Team Leads
+          Back to Project Managers
         </Button>
       </Link>
 
@@ -83,7 +87,7 @@ export default async function TeamLeadDetailPage({
           </CardHeader>
           <CardContent className="-mt-5">
             <div className="flex justify-end gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
+              <div className="flex items-end gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
                   Joined:{" "}
@@ -147,7 +151,6 @@ export default async function TeamLeadDetailPage({
                   </p>
                 </div>
               </div>
-
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -179,7 +182,6 @@ export default async function TeamLeadDetailPage({
                       key={index}
                       className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700"
                     >
-                      {/* <Code2 className="h-3 w-3" /> */}
                       {skill}
                     </span>
                   ))}
@@ -189,58 +191,80 @@ export default async function TeamLeadDetailPage({
           )}
 
         {/* Projects Managed */}
-        {user.leadProjects && user.leadProjects.length > 0 && (
+        {projects && projects.length > 0 && (
           <Card>
-            <CardHeader>
+            <CardHeader className="pt-0 mt-0">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FolderKanban className="h-5 w-5" />
-                Projects Managed
+                Projects Managed ({projects.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 -mt-5">
-              {user.leadProjects.map((project: any) => (
-                <div key={project.id} className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
-                    {project.name
-                      .split(" ")
-                      .map((p: string) => p[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
+            <CardContent className="pt-0 -mt-5">
+              <div className="space-y-2">
+                {projects.map((project: any) => (
+                  <div key={project.id} className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-700 shrink-0">
+                      {project.name
+                        .split(" ")
+                        .map((p: string) => p[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium truncate">
+                        {project.name}
+                      </p>
+                      <p className="-mt-1">
+                        <Link
+                          href={`/dashboard/projects/${project.id}`}
+                          className="text-xs text-blue-600 hover:text-blue-700"
+                        >
+                          View Detail
+                        </Link>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap w-20">
+                        {project._count.members} members
+                      </span>
+                      {project.teamLead && (
+                        <span className="text-xs whitespace-nowrap w-25">
+                          {project.teamLead.name}
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap  ${
+                          project.status === "ACTIVE"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {project.status}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-base">{project.name}</p>
-                    <Link
-                      href={`/dashboard/projects/${project.id}`}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View Project Details
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Team Members */}
+        {/* Team Leads */}
         {user.subordinates && user.subordinates.length > 0 && (
           <Card>
-            <CardHeader>
+            <CardHeader className="">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Users className="h-5 w-5" />
-                Team Members ({user.subordinates.length})
+                Team Leads ({totalTeamLeads})
               </CardTitle>
             </CardHeader>
             <CardContent className="-mt-5">
-              <div className="grid gap-3">
+              <div className="space-y-2">
                 {user.subordinates.map((subordinate: any) => (
-                  <div
-                    key={subordinate.id}
-                    className="flex items-center gap-3  rounded-lgr"
-                  >
+                  <div key={subordinate.id} className="flex items-center gap-3">
                     <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold shrink-0"
                       style={{
                         backgroundColor: generateColor(
                           subordinate.name,
@@ -255,14 +279,16 @@ export default async function TeamLeadDetailPage({
                         .slice(0, 2)
                         .toUpperCase()}
                     </div>
-                    <div>
-                      <p className="font-semibold">{subordinate.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-[15px] truncate">
+                        {subordinate.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {subordinate.email}
                       </p>
                     </div>
                     <Link
-                      href={`/dashboard/team-member/${subordinate.id}`}
+                      href={`/dashboard/team-lead/${subordinate.id}`}
                       className="ml-auto text-sm text-blue-600 hover:text-blue-700"
                     >
                       View Profile
@@ -277,16 +303,16 @@ export default async function TeamLeadDetailPage({
         {/* Manager Information */}
         {user.manager && (
           <Card>
-            <CardHeader>
+            <CardHeader className="">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <User className="h-5 w-5" />
                 Reports To
               </CardTitle>
             </CardHeader>
-            <CardContent className="-mt-5">
-              <div className="flex items-center gap-3">
+            <CardContent className="pt-0 -mt-5">
+              <div className="flex items-center gap-2">
                 <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold "
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shrink-0"
                   style={{
                     backgroundColor: generateColor(
                       user.manager.name,
@@ -301,16 +327,10 @@ export default async function TeamLeadDetailPage({
                     .slice(0, 2)
                     .toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-semibold">{user.manager.name}</p>
-                  <p className="text-sm text-muted-foreground -mt-1">
-                    {/* {user.manager.email} */}
-                    <Link
-                      href={`/dashboard/project-manager/${user.manager.id}`}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View Profile
-                    </Link>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{user.manager.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.manager.email}
                   </p>
                 </div>
               </div>
