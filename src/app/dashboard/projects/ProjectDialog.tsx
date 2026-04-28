@@ -17,8 +17,8 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Folder, FolderKanban } from "lucide-react";
-import { Project } from "./ProjectList";
+import { Code2, Folder, FolderKanban } from "lucide-react";
+import { ProjectFull } from "./ProjectList";
 import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -43,29 +43,25 @@ const baseSchema = z.object({
   status: z.enum(["ACTIVE", "COMPLETED"]),
   pmId: z.number().optional().nullable(),
   tlId: z.number().optional().nullable(),
-  // startDate: z.string().optional(),
-  // endDate: z.string().optional(),
   teamMembers: z.array(z.number()).optional(),
+  techstack: z.string().optional(),
 });
 
-// For creation: All fields required except description and tlId
 const createSchema = baseSchema.extend({
   status: z.enum(["ACTIVE", "COMPLETED"]).default("ACTIVE"),
 });
 
-// For update: All fields optional
 const updateSchema = baseSchema.partial();
 
 type FormData = z.infer<typeof createSchema>;
 
-// Option arrays for select dropdowns
 const statusOptions = [
   { value: "ACTIVE", label: "Active" },
   { value: "COMPLETED", label: "Completed" },
 ];
 
 interface ProjectDialogProps {
-  project?: Project;
+  project?: ProjectFull;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (projectData: {
@@ -74,9 +70,8 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
-    // startDate?: Date;
-    // endDate?: Date;
     teamMembers?: number[];
+    techstack?: string[];
   }) => Promise<void>;
   onUpdate: (projectData: {
     id: number;
@@ -85,9 +80,8 @@ interface ProjectDialogProps {
     status?: "ACTIVE" | "COMPLETED";
     pmId?: number;
     tlId?: number;
-    // startDate?: Date;
-    // endDate?: Date;
     teamMembers?: number[];
+    techstack?: string[];
   }) => Promise<void>;
   addDialog?: {
     title: string;
@@ -95,6 +89,7 @@ interface ProjectDialogProps {
     updateTitle?: string;
     updateDescription?: string;
   };
+  projectManagers?: Array<{ id: number; name: string }>;
 }
 
 interface User {
@@ -111,6 +106,7 @@ export function ProjectDialog({
   onSave,
   onUpdate,
   addDialog,
+  projectManagers,
 }: ProjectDialogProps) {
   const isEditMode = !!project?.id;
   const formSchema = isEditMode ? updateSchema : createSchema;
@@ -118,7 +114,7 @@ export function ProjectDialog({
   type CreateFormData = z.infer<typeof createSchema>;
   type UpdateFormData = z.infer<typeof updateSchema>;
 
-  const [projectManagers, setProjectManagers] = useState<User[]>([]);
+  // const [projectManagers, setProjectManagers] = useState<User[]>([]);
   const [teamLeads, setTeamLeads] = useState<User[]>([]);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -133,8 +129,6 @@ export function ProjectDialog({
       status: "ACTIVE",
       pmId: undefined,
       tlId: undefined,
-      // startDate: "",
-      // endDate: "",
       teamMembers: [],
     },
   });
@@ -143,7 +137,7 @@ export function ProjectDialog({
     if (project && open) {
       // Extract team member IDs from project members
       const existingTeamMemberIds =
-        project.members?.map((m: any) => m.userId) || [];
+        project.members?.map((m: any) => m.user.id) || [];
 
       form.reset({
         name: project.name,
@@ -151,17 +145,8 @@ export function ProjectDialog({
         status: project.status,
         pmId: project.pmId,
         tlId: project.tlId || undefined,
-        // startDate: project.startDate
-        //   ? new Date(project.startDate as string | Date)
-        //       .toISOString()
-        //       .split("T")[0]
-        //   : "",
-        // endDate: project.endDate
-        //   ? new Date(project.endDate as string | Date)
-        //       .toISOString()
-        //       .split("T")[0]
-        //   : "",
         teamMembers: existingTeamMemberIds,
+        techstack: project.techstack?.join(", ") || "",
       });
     } else if (open) {
       form.reset({
@@ -170,8 +155,6 @@ export function ProjectDialog({
         status: "ACTIVE",
         pmId: undefined,
         tlId: undefined,
-        // startDate: "",
-        // endDate: "",
         teamMembers: [],
       });
     }
@@ -182,12 +165,12 @@ export function ProjectDialog({
       if (!open) return;
       setLoadingUsers(true);
       try {
-        const [pmRes, tlRes, tmRes] = await Promise.all([
-          api.get("/users?role=PM"),
+        const [ tlRes, tmRes] = await Promise.all([
+          // api.get("/users?role=PM"),
           api.get("/users?role=TL"),
           api.get("/users?role=TM"),
         ]);
-        setProjectManagers(pmRes.data.data);
+        // setProjectManagers(pmRes.data.data);
         setTeamLeads(tlRes.data.data);
         setTeamMembers(tmRes.data.data);
       } catch (error) {
@@ -281,13 +264,10 @@ export function ProjectDialog({
         id: project.id,
         pmId: (data as UpdateFormData).pmId ?? undefined,
         tlId: (data as UpdateFormData).tlId ?? undefined,
-        // startDate: (data as UpdateFormData).startDate
-        //   ? new Date((data as UpdateFormData).startDate as string)
-        //   : undefined,
-        // endDate: (data as UpdateFormData).endDate
-        //   ? new Date((data as UpdateFormData).endDate as string)
-        //   : undefined,
         teamMembers: (data as UpdateFormData).teamMembers,
+        techstack: data.techstack && data.techstack.trim()
+            ? data.techstack.split(",").map((s) => s.trim()).filter(Boolean)
+            : undefined,
       });
     } else {
       const createData = data as CreateFormData;
@@ -297,13 +277,10 @@ export function ProjectDialog({
         status: createData.status,
         pmId: createData.pmId ?? undefined,
         tlId: createData.tlId ?? undefined,
-        // startDate: createData.startDate
-        //   ? new Date(createData.startDate as string)
-        //   : undefined,
-        // endDate: createData.endDate
-        //   ? new Date(createData.endDate as string)
-        //   : undefined,
         teamMembers: createData.teamMembers,
+        techstack: createData.techstack && createData.techstack.trim()
+            ? createData.techstack.split(",").map((s) => s.trim()).filter(Boolean)
+            : undefined,
       });
     }
     onOpenChange(false);
@@ -380,6 +357,30 @@ export function ProjectDialog({
               )}
             />
 
+            {/* Techstack Field */}
+            <Controller
+              name="techstack"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="techstack">
+                    <div className="flex items-center gap-2">
+                      <Code2 className="h-4 w-4" />
+                      Tech Stack (comma separated)
+                    </div>
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="techstack"
+                    placeholder="Add technologies like React, TypeScript, TailwindCSS"
+                    aria-invalid={fieldState.invalid}
+                    className="h-10"
+                  />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               {/* Project Manager Field */}
               <Controller
@@ -405,12 +406,12 @@ export function ProjectDialog({
                             <SelectItem value="loading" disabled>
                               Loading...
                             </SelectItem>
-                          ) : projectManagers.length === 0 ? (
+                          ) : projectManagers?.length === 0 ? (
                             <SelectItem value="no-managers" disabled>
                               No managers available
                             </SelectItem>
                           ) : (
-                            projectManagers.map((pm) => (
+                            projectManagers?.map((pm) => (
                               <SelectItem key={pm.id} value={String(pm.id)}>
                                 {pm.name}
                               </SelectItem>
@@ -550,3 +551,4 @@ export function ProjectDialog({
     </Dialog>
   );
 }
+

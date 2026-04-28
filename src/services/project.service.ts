@@ -16,8 +16,7 @@ const projectSelect = {
   status: true,
   pmId: true,
   tlId: true,
-  startDate: true,
-  endDate: true,
+  techstack: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -137,7 +136,8 @@ export async function createProjectService(payload: CreateProjectPayload) {
     throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project data"), 400);
   }
 
-  const { name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
+  const { name, description, status, pmId, tlId, startDate,
+     endDate, teamMembers, techstack } = parsedPayload.data;
 
   if (pmId) {
     const projectManager = await prisma.user.findUnique({
@@ -173,6 +173,7 @@ export async function createProjectService(payload: CreateProjectPayload) {
     data: {
       name,
       description,
+      techstack: techstack,
       status: status || "ACTIVE",
       ...(pmId ? { pmId } : {}),
       ...(tlId ? { tlId } : {}),
@@ -212,7 +213,7 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
     throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project update data"), 400);
   }
 
-  const { id: parsedId, name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
+  const { id: parsedId, name, description, status, pmId, tlId, startDate, endDate, teamMembers, techstack } = parsedPayload.data;
 
   const existingProject = await prisma.project.findUnique({
     where: { id: parsedId },
@@ -285,6 +286,7 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
       ...(tlId !== undefined ? { tlId } : {}),
       ...(startDate !== undefined ? { startDate } : {}),
       ...(endDate !== undefined ? { endDate } : {}),
+      ...(techstack !== undefined ? { techstack } : {}),
     },
     select: projectSelect,
   });

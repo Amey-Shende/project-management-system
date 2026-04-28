@@ -81,7 +81,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "teamMembersCount",
     label: "Team Members",
-    width: "w-[12%]",
+    width: "w-[10%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
         <Users className="h-3.5 w-3.5" />
@@ -101,18 +101,12 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "status",
-    label: "Status",
-    width: "w-[10%]",
+    key: "Designation",
+    label: "Designation",
+    width: "w-[12%]",
     renderCell: (user) => (
-      <div
-        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-          user.isActive
-            ? "bg-green-100 text-green-700"
-            : "bg-gray-100 text-gray-700"
-        }`}
-      >
-        {user.isActive ? "Active" : "Inactive"}
+      <div className="inline-flex items-center rounded-full px-3 py-1 text-sm">
+        {user.designation || "Team Lead"}
       </div>
     ),
   },

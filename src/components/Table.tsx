@@ -182,7 +182,7 @@ function Table<T extends Record<string, unknown>>({
             </div>
 
             {/* ── Rows (Scrollable) ── */}
-            <div className="mt-2 overflow-auto max-h-[calc(100vh-14rem)] scrollbar-thin pb-3">
+            <div className="mt-2 overflow-auto max-h-[calc(100vh-15rem)] scrollbar-thin">
                 {data.length === 0 ? (
                     emptyState ?? defaultEmpty
                 ) : (

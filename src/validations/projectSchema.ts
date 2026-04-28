@@ -9,6 +9,7 @@ export const createProjectSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   teamMembers: z.array(z.number()).optional(),
+  techstack: z.array(z.string()).optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -21,6 +22,7 @@ export const updateProjectSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   teamMembers: z.array(z.number()).optional(),
+  techstack: z.array(z.string()).optional(),
 });
 
 export const getProjectsSchema = z.object({

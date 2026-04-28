@@ -96,18 +96,12 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "status",
-    label: "Status",
-    width: "w-[12%]",
+    key: "Designation",
+    label: "Designation",
+    width: "w-[15%]",
     renderCell: (user) => (
-      <div
-        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-          user.isActive
-            ? "bg-green-100 text-green-700"
-            : "bg-gray-100 text-gray-700"
-        }`}
-      >
-        {user.isActive ? "Active" : "Inactive"}
+      <div className="inline-flex items-center rounded-full px-3 py-1 text-sm">
+        {user.designation || "Software Engineer"}
       </div>
     ),
   },
