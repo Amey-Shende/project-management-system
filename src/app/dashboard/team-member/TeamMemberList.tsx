@@ -118,25 +118,25 @@ export interface User extends Record<string, unknown> {
   name: string;
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
-  designation: string | null;
-  department: string | null;
-  phone: string | null;
-  skills: unknown;
+  designation?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  skills?: unknown;
   isActive: boolean;
   assignedProjectId?: number | null;
-  managerId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-  memberProjects: Array<{
+  managerId?: number | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  memberProjects?: Array<{ 
     project: {
       id: number;
-      name: string;
+      name?: string;
     };
   }>;
-  manager: {
+  manager?: {
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   } | null;
 }
 

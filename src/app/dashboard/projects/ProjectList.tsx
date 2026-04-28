@@ -16,7 +16,7 @@ export interface Project extends Record<string, unknown> {
   description: string | null;
   status: "ACTIVE" | "COMPLETED";
   updatedAt: Date;
-  techstack?: string[];
+  techstack?: unknown;
   projectManager?: {
     id: number;
     name: string;
@@ -37,7 +37,7 @@ export interface ProjectFull extends Record<string, unknown> {
   status: "ACTIVE" | "COMPLETED";
   pmId: number | null;
   tlId: number | null;
-  techstack?: string[];
+  techstack?: unknown;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;

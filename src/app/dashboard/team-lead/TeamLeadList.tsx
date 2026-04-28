@@ -124,24 +124,24 @@ export interface User extends Record<string, unknown> {
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
   password?: string | null;
-  designation: string | null;
-  department: string | null;
-  phone: string | null;
-  skills: unknown;
+  designation?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  skills?: unknown;
   isActive: boolean;
   manager?: {
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   } | null;
   leadProjects?: Array<{
     id: number;
-    name: string;
+    name?: string;
   }>;
   subordinates?: Array<{
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   }>;
 }
 

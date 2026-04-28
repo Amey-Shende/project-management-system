@@ -46,7 +46,7 @@ export function ProjectFilter({
             placeholder="Search projects..."
             value={searchValue}
             onChange={(e) => onSearchChange?.(e.target.value)}
-            className="h-10 w-64 pl-9"
+            className="h-8 w-64 pl-9"
           />
         </div> */}
         <Select value={statusValue} onValueChange={onStatusChange}>

@@ -71,7 +71,7 @@ interface ProjectDialogProps {
     pmId?: number;
     tlId?: number;
     teamMembers?: number[];
-    techstack?: string[];
+    techstack?: unknown;
   }) => Promise<void>;
   onUpdate: (projectData: {
     id: number;
@@ -81,7 +81,7 @@ interface ProjectDialogProps {
     pmId?: number;
     tlId?: number;
     teamMembers?: number[];
-    techstack?: string[];
+    techstack?: unknown;
   }) => Promise<void>;
   addDialog?: {
     title: string;
@@ -146,7 +146,9 @@ export function ProjectDialog({
         pmId: project.pmId,
         tlId: project.tlId || undefined,
         teamMembers: existingTeamMemberIds,
-        techstack: project.techstack?.join(", ") || "",
+        techstack: Array.isArray(project?.techstack)
+          ? (project.techstack as string[]).join(", ")
+          : "",
       });
     } else if (open) {
       form.reset({
@@ -165,7 +167,7 @@ export function ProjectDialog({
       if (!open) return;
       setLoadingUsers(true);
       try {
-        const [ tlRes, tmRes] = await Promise.all([
+        const [tlRes, tmRes] = await Promise.all([
           // api.get("/users?role=PM"),
           api.get("/users?role=TL"),
           api.get("/users?role=TM"),
@@ -225,7 +227,9 @@ export function ProjectDialog({
       const isSubordinate = selectedTL?.managerId === pmId;
 
       if (pmId && !isSubordinate) {
-        setTlWarning("This Team Lead is not a direct subordinate of the selected Project Manager.");
+        setTlWarning(
+          "This Team Lead is not a direct subordinate of the selected Project Manager.",
+        );
       } else {
         setTlWarning("");
       }
@@ -250,8 +254,8 @@ export function ProjectDialog({
       try {
         await Promise.all(
           selectedTeamMemberIds.map((memberId) =>
-            api.patch(`/users/${memberId}`, { managerId: selectedTlId })
-          )
+            api.patch(`/users/${memberId}`, { managerId: selectedTlId }),
+          ),
         );
       } catch (error) {
         console.error("Error updating reporting managers:", error);
@@ -265,9 +269,12 @@ export function ProjectDialog({
         pmId: (data as UpdateFormData).pmId ?? undefined,
         tlId: (data as UpdateFormData).tlId ?? undefined,
         teamMembers: (data as UpdateFormData).teamMembers,
-        techstack: data.techstack && data.techstack.trim()
-            ? data.techstack.split(",").map((s) => s.trim()).filter(Boolean)
-            : undefined,
+        techstack: data?.techstack
+          ? data.techstack
+              ?.split(",")
+              .map((s) => s?.trim())
+              ?.filter(Boolean)
+          : undefined,
       });
     } else {
       const createData = data as CreateFormData;
@@ -278,8 +285,12 @@ export function ProjectDialog({
         pmId: createData.pmId ?? undefined,
         tlId: createData.tlId ?? undefined,
         teamMembers: createData.teamMembers,
-        techstack: createData.techstack && createData.techstack.trim()
-            ? createData.techstack.split(",").map((s) => s.trim()).filter(Boolean)
+        techstack:
+          createData.techstack && createData.techstack.trim()
+            ? createData.techstack
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
             : undefined,
       });
     }
@@ -460,7 +471,13 @@ export function ProjectDialog({
                                 const isSubordinate = tl.managerId === pmId;
                                 return (
                                   <SelectItem key={tl.id} value={String(tl.id)}>
-                                    <span className={isSubordinate && pmId ? "font-semibold" : ""}>
+                                    <span
+                                      className={
+                                        isSubordinate && pmId
+                                          ? "font-semibold"
+                                          : ""
+                                      }
+                                    >
                                       {tl.name}
                                     </span>
                                   </SelectItem>
@@ -471,7 +488,9 @@ export function ProjectDialog({
                         </SelectContent>
                       </Select>
                       {tlWarning && (
-                        <p className="text-xs text-amber-600 mt-1">{tlWarning}</p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          {tlWarning}
+                        </p>
                       )}
                       <FieldError errors={[fieldState.error]} />
                     </Field>
@@ -551,4 +570,3 @@ export function ProjectDialog({
     </Dialog>
   );
 }
-

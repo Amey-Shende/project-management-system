@@ -66,7 +66,7 @@ export default async function TeamLeadDetailPage({
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 {user.isActive ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                     <CheckCircle className="h-3 w-3" />
@@ -78,7 +78,7 @@ export default async function TeamLeadDetailPage({
                     Inactive
                   </span>
                 )}
-              </div>
+              </div> */}
             </div>
           </CardHeader>
           <CardContent className="-mt-5">

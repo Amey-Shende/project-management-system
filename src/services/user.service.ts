@@ -46,6 +46,9 @@ const teamMemberListSelect = {
 // For Team Lead list - adds leadProjects and subordinates
 const teamLeadListSelect = {
   ...userListSelect,
+  department: true,
+  phone: true,
+  skills: true,
   leadProjects: {
     select: {
       id: true,
