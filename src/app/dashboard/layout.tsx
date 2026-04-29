@@ -35,7 +35,7 @@ export default function DashboardLayout({
       <main className="flex h-screen w-screen flex-col bg-muted/30">
         <Suspense fallback={<div className="h-15 w-full" />}>
           <Navbar user={user} />
-          <Separator />
+          {/* <Separator /> */}
         </Suspense>
         <div className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-2">
           <Suspense fallback={<Loader />}>{children}</Suspense>

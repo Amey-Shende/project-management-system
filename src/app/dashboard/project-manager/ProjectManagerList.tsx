@@ -2,7 +2,7 @@
 
 import Table, { TableColumn } from "@/components/Table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProjectMangerFilter } from "./ProjectManagerFilter";
 import { PMDialog } from "./PMDialog";
 import { Mail, UserRound, Users, Briefcase, FolderKanban } from "lucide-react";
@@ -10,6 +10,7 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 const columns: TableColumn<User>[] = [
   {
@@ -121,9 +122,32 @@ interface ProjectManagerListProps {
 }
 
 function ProjectManagerList({ initialData }: ProjectManagerListProps) {
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search");
   const [users, setUsers] = useState<User[]>(initialData);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const fetchUsers = async () => {
+    try {
+      const search = searchParams.get("search") || undefined;
+      const params = new URLSearchParams();
+      params.append("role", "PM");
+      if (search) params.append("search", search);
+      const queryString = params.toString();
+      const url = queryString ? `/users?${queryString}` : "/users?role=PM";
+      const res = await api.get(url);
+      if (res.status !== 200) throw new Error("Failed to fetch users");
+      setUsers(res.data.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to fetch users");
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [search]);
 
   const handleUpdateUser = async (user: {
     id: number;

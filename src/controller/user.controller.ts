@@ -14,7 +14,8 @@ export async function getUserController(request: Request) {
         const { searchParams } = new URL(request.url);
         const id = getUserIdFromHeader(request);
         const role = searchParams.get("role") ? parseRole(searchParams.get("role")) : undefined;
-        const users = await getUsersService({ id, role });
+        const search = searchParams.get("search") || undefined;
+        const users = await getUsersService({ id, role, search });
 
         return NextResponse.json({
             message: "Users fetched successfully",

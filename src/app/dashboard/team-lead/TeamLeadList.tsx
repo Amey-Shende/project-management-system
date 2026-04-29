@@ -1,7 +1,7 @@
 "use client";
 import Table, { TableColumn } from "@/components/Table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TeamLeadFilter } from "./TeamLeadFilter";
 import { TLDialog } from "./TLDialog";
 import { Mail, UserRound, Briefcase, Users, FolderKanban } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSearchParams } from "next/navigation";
 
 const columns: TableColumn<User>[] = [
   {
@@ -150,13 +151,21 @@ interface TeamLeadListProps {
 }
 
 function TeamLeadList({ initialData }: TeamLeadListProps) {
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search");
   const [users, setUsers] = useState<User[]>(initialData);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/users?role=TL");
+      const search = searchParams.get("search") || undefined;
+      const params = new URLSearchParams();
+      params.append("role", "TL");
+      if (search) params.append("search", search);
+      const queryString = params.toString();
+      const url = queryString ? `/users?${queryString}` : "/users?role=TL";
+      const res = await api.get(url);
       if (res.status !== 200) throw new Error("Failed to fetch users");
       setUsers(res.data.data);
     } catch (error) {
@@ -164,6 +173,11 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
       toast.error("Failed to fetch users");
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [search]);
+
   const handleUpdateUser = async (user: {
     id: number;
     name: string;

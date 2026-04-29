@@ -29,6 +29,7 @@ export const getProjectsSchema = z.object({
   status: z.enum(["ACTIVE", "COMPLETED"]).optional(),
   pmId: z.number().optional(),
   tlId: z.number().optional(),
+  search: z.string().optional(),
 });
 
 export const deleteProjectSchema = z.object({

@@ -26,7 +26,6 @@ type ProjectFiltersProps = {
 
 export function ProjectFilter({
   onAddProject,
-  onSearchChange,
   onStatusChange,
   onPMChange,
   searchValue = "",
@@ -40,15 +39,6 @@ export function ProjectFilter({
         <h2 className="text-xl font-semibold">Projects</h2>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {/* <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={searchValue}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="h-8 w-64 pl-9"
-          />
-        </div> */}
         <Select value={statusValue} onValueChange={onStatusChange}>
           <SelectTrigger className="h-10 w-40">
             <SelectValue placeholder="Status" />

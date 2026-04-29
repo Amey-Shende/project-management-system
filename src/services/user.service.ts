@@ -199,13 +199,19 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
       400,
     );
   }
-  const { role } = parsedPayload.data;
+  const { role, search } = parsedPayload.data;
 
   // For Project Managers, fetch with project statistics from project table
   if (role === "PM") {
     const users = await prisma.user.findMany({
       where: {
         role: "PM",
+        ...(search ? {
+          OR: [
+            { name: { contains: search } },
+            { email: { contains: search } },
+          ],
+        } : {}),
       },
       select: {
         id: true,
@@ -277,6 +283,12 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
   const users = await prisma.user.findMany({
     where: {
       ...(role ? { role } : {}),
+      ...(search ? {
+        OR: [
+          { name: { contains: search } },
+          { email: { contains: search } },
+        ],
+      } : {}),
     },
     select: selectObject,
     orderBy: {

@@ -61,6 +61,7 @@ export const deleteUserSchema = z.object({
 export const getUsersSchema = z.object({
     id: z.number().int().positive().optional(),
     role: z.nativeEnum(Role).optional(),
+    search: z.string().optional(),
 });
 
 export const changePasswordSchema = z.object({

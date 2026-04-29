@@ -32,13 +32,19 @@ export async function getProjectsService(payload: GetProjectsPayload = {}) {
     throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project query"), 400);
   }
 
-  const { status, pmId, tlId } = parsedPayload.data || {};
+  const { status, pmId, tlId, search } = parsedPayload.data || {};
 
   const projects = await prisma.project.findMany({
     where: {
       ...(status ? { status } : {}),
       ...(pmId ? { pmId } : {}),
       ...(tlId ? { tlId } : {}),
+      ...(search ? {
+        OR: [
+          { name: { contains: search } },
+          { description: { contains: search } },
+        ],
+      } : {}),
     },
     select: {
       ...projectSelect,

@@ -9,6 +9,7 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import Link from "next/link";
 import { generateColor } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 
 export interface Project extends Record<string, unknown> {
   id: number;
@@ -220,12 +221,13 @@ interface ProjectListProps {
 }
 
 function ProjectList({ initialData }: ProjectListProps) {
+  const searchParams = useSearchParams();
+  const searchbox = searchParams.get("search")
   const [projects, setProjects] = useState<Project[]>(initialData);
   const [editingProject, setEditingProject] = useState<
     ProjectFull | undefined
   >();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [pmFilter, setPMFilter] = useState("all");
   const [projectManagers, setProjectManagers] = useState<
@@ -239,6 +241,9 @@ function ProjectList({ initialData }: ProjectListProps) {
   }) => {
     try {
       const params = new URLSearchParams();
+      if (filters?.search) {
+        params.append("search", filters.search);
+      }
       if (filters?.status && filters.status !== "all") {
         params.append("status", filters.status);
       }
@@ -249,20 +254,7 @@ function ProjectList({ initialData }: ProjectListProps) {
       const url = queryString ? `/project?${queryString}` : "/project";
       const res = await api.get(url);
       if (res.status !== 200) throw new Error("Failed to fetch projects");
-      let fetchedProjects = res.data.data;
-
-      // Client-side search filtering
-      if (filters?.search) {
-        const searchLower = filters.search.toLowerCase();
-        fetchedProjects = fetchedProjects.filter(
-          (project: Project) =>
-            project.name.toLowerCase().includes(searchLower) ||
-            (project.description &&
-              project.description.toLowerCase().includes(searchLower)),
-        );
-      }
-
-      setProjects(fetchedProjects);
+      setProjects(res.data.data);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to fetch projects");
@@ -279,6 +271,12 @@ function ProjectList({ initialData }: ProjectListProps) {
       console.error("Error fetching project managers:", error);
     }
   };
+
+  // Refetch projects when search params change
+  useEffect(() => {
+    
+    fetchProjects({ search: searchbox || undefined, status: statusFilter, pmId: pmFilter });
+  }, [searchbox]);
 
   useEffect(() => {
     fetchProjectManagers();
@@ -300,7 +298,7 @@ function ProjectList({ initialData }: ProjectListProps) {
       const res = await api.patch(`/project/${id}`, data);
       if (res.status !== 200) throw new Error("Failed to update project");
       await fetchProjects({
-        search: searchQuery,
+        search: searchParams.get("search") || undefined,
         status: statusFilter,
         pmId: pmFilter,
       });
@@ -316,7 +314,7 @@ function ProjectList({ initialData }: ProjectListProps) {
       const res = await api.delete(`/project/${project.id}`);
       if (res.status !== 200) throw new Error("Failed to delete project");
       await fetchProjects({
-        search: searchQuery,
+        search: searchParams.get("search") || undefined,
         status: statusFilter,
         pmId: pmFilter,
       });
@@ -349,19 +347,15 @@ function ProjectList({ initialData }: ProjectListProps) {
     }
   };
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    fetchProjects({ search: value, status: statusFilter, pmId: pmFilter });
-  };
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
-    fetchProjects({ search: searchQuery, status: value, pmId: pmFilter });
+    fetchProjects({ search: searchParams.get("search") || undefined, status: value, pmId: pmFilter });
   };
 
   const handlePMChange = (value: string) => {
     setPMFilter(value);
-    fetchProjects({ search: searchQuery, status: statusFilter, pmId: value });
+    fetchProjects({ search: searchParams.get("search") || undefined, status: statusFilter, pmId: value });
   };
 
   const handleEditClick = async (project: Project) => {
@@ -389,10 +383,8 @@ function ProjectList({ initialData }: ProjectListProps) {
           <CardHeader>
             <ProjectFilter
               onAddProject={handleAddProject}
-              onSearchChange={handleSearchChange}
               onStatusChange={handleStatusChange}
               onPMChange={handlePMChange}
-              searchValue={searchQuery}
               statusValue={statusFilter}
               pmValue={pmFilter}
               projectManagers={projectManagers}
