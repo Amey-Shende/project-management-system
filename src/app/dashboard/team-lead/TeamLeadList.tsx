@@ -267,6 +267,8 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
                 description: (row) =>
                   `"${row.name}" will be removed permanently.`,
               }}
+              isDeleteDisabled={(row) => (row.leadProjects?.length || 0) > 0}
+              deleteDisabledMessage="Please unassign from all projects before deleting"
             />
           </CardContent>
         </Card>

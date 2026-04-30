@@ -68,6 +68,12 @@ export interface TableProps<T> extends TableActionProp<T> {
         description?: (row: T) => string;
     };
 
+    /** Function to determine if delete should be disabled for a row */
+    isDeleteDisabled?: (row: T) => boolean;
+
+    /** Message to show when delete is disabled */
+    deleteDisabledMessage?: string;
+
     /** Shown when `data` is empty */
     emptyState?: React.ReactNode;
 
@@ -107,9 +113,11 @@ function cellWidthClasses<T>(col: TableColumn<T>): string {
 type ActionTabProps<T> = TableActionProp<T> & {
     row: T;
     deleteDialog?: TableProps<T>["deleteDialog"];
+    isDeleteDisabled?: boolean;
+    deleteDisabledMessage?: string;
 };
 
-function ActionTab<T>({ onDelete, onEdit, row, deleteDialog }: ActionTabProps<T>) {
+function ActionTab<T>({ onDelete, onEdit, row, deleteDialog, isDeleteDisabled, deleteDisabledMessage }: ActionTabProps<T>) {
     return (
         <div className="flex justify-center items-center gap-2">
             {onEdit && (
@@ -138,6 +146,8 @@ function ActionTab<T>({ onDelete, onEdit, row, deleteDialog }: ActionTabProps<T>
                             : "This action cannot be undone."
                     }
                     onDelete={() => onDelete(row)}
+                    disabled={isDeleteDisabled}
+                    disabledMessage={deleteDisabledMessage}
                 />
             )}
         </div>
@@ -155,6 +165,8 @@ function Table<T extends Record<string, unknown>>({
     onEdit,
     onDelete,
     deleteDialog,
+    isDeleteDisabled,
+    deleteDisabledMessage,
     emptyState,
     rowKey,
     rowClassName,
@@ -207,6 +219,8 @@ function Table<T extends Record<string, unknown>>({
                                                 onDelete={onDelete}
                                                 row={row}
                                                 deleteDialog={deleteDialog}
+                                                isDeleteDisabled={isDeleteDisabled ? isDeleteDisabled(row) : false}
+                                                deleteDisabledMessage={deleteDisabledMessage}
                                             />
                                         ) : col.renderCell ? (
                                             col.renderCell(row)
