@@ -66,7 +66,7 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <Suspense fallback={<Loader />}>
-      <main className="relative min-h-screen overflow-hidden bg-black">
+      <main className="relative min-h-screen overflow-hidden">
         {/* <video
           autoPlay
           muted
