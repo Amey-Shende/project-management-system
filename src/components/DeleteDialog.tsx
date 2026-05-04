@@ -5,7 +5,21 @@ import { Button } from './ui/button'
 import { Trash2Icon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
-function DeleteDialog({ buttonLabel, dialogTitle, dialogDescription, onDelete }: { buttonLabel: string, dialogTitle: string, dialogDescription: string, onDelete: () => void }) {
+function DeleteDialog({ 
+  buttonLabel, 
+  dialogTitle, 
+  dialogDescription, 
+  onDelete,
+  disabled = false,
+  disabledMessage 
+}: { 
+  buttonLabel: string
+  dialogTitle: string
+  dialogDescription: string
+  onDelete: () => void
+  disabled?: boolean
+  disabledMessage?: string
+}) {
     const id = useId()
     return (
         <div suppressHydrationWarning>
@@ -22,7 +36,7 @@ function DeleteDialog({ buttonLabel, dialogTitle, dialogDescription, onDelete }:
                         {buttonLabel}
                     </TooltipContent>
                 </Tooltip>
-                <AlertDialogContent size="sm" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <AlertDialogContent size="sm" onCloseAutoFocus={(e) => e.preventDefault()} className='min-w-[400px]'>
                     <AlertDialogHeader>
                         <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                             <Trash2Icon />
@@ -32,9 +46,18 @@ function DeleteDialog({ buttonLabel, dialogTitle, dialogDescription, onDelete }:
                             {dialogDescription}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
+                    {disabled && disabledMessage && (
+                        <div className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+                            {disabledMessage}
+                        </div>
+                    )}
+                    <AlertDialogFooter className='gap-4'>
                         <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-                        <AlertDialogAction variant="destructive" onClick={onDelete}>
+                        <AlertDialogAction 
+                            variant="destructive" 
+                            onClick={onDelete}
+                            disabled={disabled}
+                        >
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

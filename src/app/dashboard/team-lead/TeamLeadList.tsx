@@ -1,7 +1,7 @@
 "use client";
 import Table, { TableColumn } from "@/components/Table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TeamLeadFilter } from "./TeamLeadFilter";
 import { TLDialog } from "./TLDialog";
 import { Mail, UserRound, Briefcase, Users, FolderKanban } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSearchParams } from "next/navigation";
 
 const columns: TableColumn<User>[] = [
   {
@@ -81,7 +82,7 @@ const columns: TableColumn<User>[] = [
   {
     key: "teamMembersCount",
     label: "Team Members",
-    width: "w-[12%]",
+    width: "w-[10%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
         <Users className="h-3.5 w-3.5" />
@@ -101,18 +102,12 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "status",
-    label: "Status",
-    width: "w-[10%]",
+    key: "Designation",
+    label: "Designation",
+    width: "w-[12%]",
     renderCell: (user) => (
-      <div
-        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-          user.isActive
-            ? "bg-green-100 text-green-700"
-            : "bg-gray-100 text-gray-700"
-        }`}
-      >
-        {user.isActive ? "Active" : "Inactive"}
+      <div className="inline-flex items-center rounded-full px-3 py-1 text-sm">
+        {user.designation || "Team Lead"}
       </div>
     ),
   },
@@ -130,24 +125,24 @@ export interface User extends Record<string, unknown> {
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
   password?: string | null;
-  designation: string | null;
-  department: string | null;
-  phone: string | null;
-  skills: unknown;
+  designation?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  skills?: unknown;
   isActive: boolean;
   manager?: {
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   } | null;
   leadProjects?: Array<{
     id: number;
-    name: string;
+    name?: string;
   }>;
   subordinates?: Array<{
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   }>;
 }
 
@@ -156,13 +151,21 @@ interface TeamLeadListProps {
 }
 
 function TeamLeadList({ initialData }: TeamLeadListProps) {
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search");
   const [users, setUsers] = useState<User[]>(initialData);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/users?role=TL");
+      const search = searchParams.get("search") || undefined;
+      const params = new URLSearchParams();
+      params.append("role", "TL");
+      if (search) params.append("search", search);
+      const queryString = params.toString();
+      const url = queryString ? `/users?${queryString}` : "/users?role=TL";
+      const res = await api.get(url);
       if (res.status !== 200) throw new Error("Failed to fetch users");
       setUsers(res.data.data);
     } catch (error) {
@@ -170,6 +173,11 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
       toast.error("Failed to fetch users");
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [search]);
+
   const handleUpdateUser = async (user: {
     id: number;
     name: string;
@@ -259,6 +267,8 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
                 description: (row) =>
                   `"${row.name}" will be removed permanently.`,
               }}
+              isDeleteDisabled={(row) => (row.leadProjects?.length || 0) > 0}
+              deleteDisabledMessage="Please unassign from all projects before deleting"
             />
           </CardContent>
         </Card>

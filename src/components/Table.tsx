@@ -68,6 +68,12 @@ export interface TableProps<T> extends TableActionProp<T> {
         description?: (row: T) => string;
     };
 
+    /** Function to determine if delete should be disabled for a row */
+    isDeleteDisabled?: (row: T) => boolean;
+
+    /** Message to show when delete is disabled */
+    deleteDisabledMessage?: string;
+
     /** Shown when `data` is empty */
     emptyState?: React.ReactNode;
 
@@ -107,9 +113,11 @@ function cellWidthClasses<T>(col: TableColumn<T>): string {
 type ActionTabProps<T> = TableActionProp<T> & {
     row: T;
     deleteDialog?: TableProps<T>["deleteDialog"];
+    isDeleteDisabled?: boolean;
+    deleteDisabledMessage?: string;
 };
 
-function ActionTab<T>({ onDelete, onEdit, row, deleteDialog }: ActionTabProps<T>) {
+function ActionTab<T>({ onDelete, onEdit, row, deleteDialog, isDeleteDisabled, deleteDisabledMessage }: ActionTabProps<T>) {
     return (
         <div className="flex justify-center items-center gap-2">
             {onEdit && (
@@ -138,6 +146,8 @@ function ActionTab<T>({ onDelete, onEdit, row, deleteDialog }: ActionTabProps<T>
                             : "This action cannot be undone."
                     }
                     onDelete={() => onDelete(row)}
+                    disabled={isDeleteDisabled}
+                    disabledMessage={deleteDisabledMessage}
                 />
             )}
         </div>
@@ -155,6 +165,8 @@ function Table<T extends Record<string, unknown>>({
     onEdit,
     onDelete,
     deleteDialog,
+    isDeleteDisabled,
+    deleteDisabledMessage,
     emptyState,
     rowKey,
     rowClassName,
@@ -182,7 +194,7 @@ function Table<T extends Record<string, unknown>>({
             </div>
 
             {/* ── Rows (Scrollable) ── */}
-            <div className="mt-2 overflow-auto max-h-[calc(100vh-14rem)] scrollbar-thin pb-3">
+            <div className="mt-2 overflow-auto max-h-[calc(100vh-15rem)] scrollbar-thin">
                 {data.length === 0 ? (
                     emptyState ?? defaultEmpty
                 ) : (
@@ -207,6 +219,8 @@ function Table<T extends Record<string, unknown>>({
                                                 onDelete={onDelete}
                                                 row={row}
                                                 deleteDialog={deleteDialog}
+                                                isDeleteDisabled={isDeleteDisabled ? isDeleteDisabled(row) : false}
+                                                deleteDisabledMessage={deleteDisabledMessage}
                                             />
                                         ) : col.renderCell ? (
                                             col.renderCell(row)
@@ -230,93 +244,3 @@ function Table<T extends Record<string, unknown>>({
 }
 
 export default Table;
-
-// ─────────────────────────────────────────────
-// USAGE EXAMPLE — Project Manager page
-// ─────────────────────────────────────────────
-//
-// import { Ban, CircleCheckBig, Mail, Shield, UserRound } from "lucide-react";
-// import Table, { TableColumn } from "@/components/Table";
-//
-// interface User {
-//   id: number;
-//   name: string;
-//   email: string;
-//   role: string;
-//   isActive: boolean;
-// }
-//
-// const columns: TableColumn<User>[] = [
-//   {
-//     key: "name",
-//     label: "Name",
-//     width: "w-[22%]",           // ← adjust freely
-//     minWidth: "min-w-[160px]",
-//     renderCell: (user) => (
-//       <div className="flex items-center gap-3">
-//         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-//           {user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
-//         </div>
-//         <div className="min-w-0">
-//           <p className="truncate text-sm font-semibold">{user.name}</p>
-//           <p className="flex items-center gap-1 text-xs text-muted-foreground">
-//             <UserRound className="h-3.5 w-3.5" /> Team member
-//           </p>
-//         </div>
-//       </div>
-//     ),
-//   },
-//   {
-//     key: "email",
-//     label: "Email",
-//     width: "w-[30%]",
-//     renderCell: (user) => (
-//       <p className="flex items-center gap-2 truncate text-sm">
-//         <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-//         <span className="truncate">{user.email}</span>
-//       </p>
-//     ),
-//   },
-//   {
-//     key: "role",
-//     label: "Role",
-//     width: "w-[15%]",
-//     renderCell: (user) => (
-//       <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-//         <Shield className="h-3.5 w-3.5" />
-//         {user.role === "USER" ? "User" : "Admin"}
-//       </div>
-//     ),
-//   },
-//   {
-//     key: "isActive",
-//     label: "Status",
-//     width: "w-[15%]",
-//     renderCell: (user) => (
-//       <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold
-//         ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-//         {user.isActive ? <CircleCheckBig className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-//         {user.isActive ? "Active" : "Inactive"}
-//       </div>
-//     ),
-//   },
-//   {
-//     key: "action",
-//     label: "Actions",
-//     width: "w-[10%]",
-//     align: "center",
-//   },
-// ];
-//
-// // In your component:
-// <Table<User>
-//   columns={columns}
-//   data={users}
-//   rowKey={(row) => row.id}
-//   onEdit={handleUpdateUser}
-//   onDelete={handleDeleteUser}
-//   deleteDialog={{
-//     title: "Delete this Project Manager?",
-//     description: (row) => `"${row.name}" will be removed permanently.`,
-//   }}
-// />

@@ -1,15 +1,15 @@
 "use client";
-
 import Table, { TableColumn } from "@/components/Table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TeamMemberFilter } from "./TeamMemberFilter";
 import { TMDialog } from "./TMDialog";
-import { Mail, UserRound, Briefcase, Code2, FolderKanban } from "lucide-react";
+import { Mail, UserRound, Briefcase, FolderKanban } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { generateColor } from "@/lib/utils";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -96,18 +96,12 @@ const columns: TableColumn<User>[] = [
     ),
   },
   {
-    key: "status",
-    label: "Status",
-    width: "w-[12%]",
+    key: "Designation",
+    label: "Designation",
+    width: "w-[15%]",
     renderCell: (user) => (
-      <div
-        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-          user.isActive
-            ? "bg-green-100 text-green-700"
-            : "bg-gray-100 text-gray-700"
-        }`}
-      >
-        {user.isActive ? "Active" : "Inactive"}
+      <div className="inline-flex items-center rounded-full px-3 py-1 text-sm">
+        {user.designation || "Software Engineer"}
       </div>
     ),
   },
@@ -124,25 +118,25 @@ export interface User extends Record<string, unknown> {
   name: string;
   email: string;
   role: "PM" | "TM" | "TL" | "CEO";
-  designation: string | null;
-  department: string | null;
-  phone: string | null;
-  skills: unknown;
+  designation?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  skills?: unknown;
   isActive: boolean;
   assignedProjectId?: number | null;
-  managerId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-  memberProjects: Array<{
+  managerId?: number | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  memberProjects?: Array<{ 
     project: {
       id: number;
-      name: string;
+      name?: string;
     };
   }>;
-  manager: {
+  manager?: {
     id: number;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
   } | null;
 }
 
@@ -151,13 +145,20 @@ interface TeamMemberListProps {
 }
 
 function TeamMemberList({ initialData }: TeamMemberListProps) {
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search");
   const [users, setUsers] = useState<User[]>(initialData);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/users?role=TM");
+      const params = new URLSearchParams();
+      params.append("role", "TM");
+      if (search) params.append("search", search);
+      const queryString = params.toString();
+      const url = queryString ? `/users?${queryString}` : "/users?role=TM";
+      const res = await api.get(url);
       if (res.status !== 200) throw new Error("Failed to fetch users");
       setUsers(res.data.data);
     } catch (error) {
@@ -165,6 +166,10 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
       toast.error("Failed to fetch users");
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [search]);
 
   const handleUpdateUser = async (userData: {
     id: number;
@@ -256,6 +261,8 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
                   description: (row) =>
                     `"${row.name}" will be removed permanently.`,
                 }}
+                isDeleteDisabled={(row) => (row.memberProjects?.length || 0) > 0}
+                deleteDisabledMessage="Please unassign from all projects before deleting"
               />
             </TooltipProvider>
           </CardContent>

@@ -63,19 +63,33 @@ export function MultiSelect({
         <Button
           variant="outline"
           role="combobox"
-          className="w-full justify-between hover:bg-white font-normal"
+          className="w-full hover:bg-white font-normal text-start"
         >
-          {selectedLabels.length > 0
-            ? selectedLabels.length === options.length
+          <span className="truncate flex-1">
+            {selectedLabels.length === 0
+              ? placeholder
+              : selectedLabels.length === options.length
               ? "All selected"
-              : selectedLabels.join(", ")
-            : placeholder}
-          <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              : selectedLabels.length <= 3
+              ? selectedLabels.join(", ")
+              : `${selectedLabels.slice(0, 2).join(", ")} +${selectedLabels.length - 2} more`}
+          </span>
+          <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-        <div className="max-h-60 overflow-y-auto">
+      <PopoverContent 
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <div 
+          className="max-h-60 overflow-y-auto scrollbar-thin"
+          onWheel={(e) => {
+            e.stopPropagation();
+            e.currentTarget.scrollTop += e.deltaY;
+          }}
+        >
           {/* ✅ Select All */}
           <div
             onClick={toggleAll}

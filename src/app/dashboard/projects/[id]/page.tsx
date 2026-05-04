@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, User, Calendar, Briefcase } from "lucide-react";
+import { ArrowLeft, Users, User, Calendar, Briefcase, Code2 } from "lucide-react";
 import Link from "next/link";
 import { getProjectByIdService } from "@/services/project.service";
 import { generateColor } from "@/lib/utils";
@@ -165,6 +165,32 @@ export default async function ProjectDetailPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* Tech Stack */}
+        {project.techstack &&
+          Array.isArray(project.techstack) &&
+          project.techstack.length > 0 && (
+            <Card>
+              <CardHeader className="mt-0 pt-0 pb-0 mb-0">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Code2 className="h-5 w-5" />
+                  Tech Stack
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="-mt-5">
+                <div className="flex flex-wrap gap-2">
+                  {(project.techstack as string[]).map((tech: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Team Members */}
         <Card>

@@ -95,38 +95,32 @@ export function ProfileInfo({ user }: ProfileInfoProps) {
             <CardContent className="space-y-4 -mt-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Full Name
-                  </p>
-                  <p className="font-medium">{user.name}</p>
+                  <p className="text-sm mb-1 font-medium">Full Name</p>
+                  <p className="text-muted-foreground">{user.name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Role</p>
-                  <p className="font-medium">{user.role}</p>
+                  <p className="text-sm mb-1 font-medium ">Role</p>
+                  <p className="text-muted-foreground">{user.role}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {user.designation && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Designation
-                    </p>
-                    <p className="font-medium">{user.designation}</p>
+                    <p className="text-sm  mb-1 font-medium">Designation</p>
+                    <p className="text-muted-foreground">{user.designation}</p>
                   </div>
                 )}
                 {user.department && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Department
-                    </p>
-                    <p className="font-medium">{user.department}</p>
+                    <p className="text-sm mb-1 font-medium">Department</p>
+                    <p className="text-muted-foreground">{user.department}</p>
                   </div>
                 )}
               </div>
               {user.manager && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Manager</p>
-                  <p className="font-medium">{user.manager.name}</p>
+                  <p className="text-sm mb-1 font-medium">Manager</p>
+                  <p className="text-muted-foreground">{user.manager.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {user.manager.email}
                   </p>
@@ -145,17 +139,13 @@ export function ProfileInfo({ user }: ProfileInfoProps) {
             </CardHeader>
             <CardContent className="space-y-4 -mt-5">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Email Address
-                </p>
-                <p className="font-medium">{user.email}</p>
+                <p className="text-sm mb-1 font-medium">Email Address</p>
+                <p className="text-muted-foreground">{user.email}</p>
               </div>
               {user.phone && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Phone Number
-                  </p>
-                  <p className="font-medium">{user.phone}</p>
+                  <p className="text-sm mb-1 font-medium">Phone Number</p>
+                  <p className="text-muted-foreground">{user.phone}</p>
                 </div>
               )}
             </CardContent>

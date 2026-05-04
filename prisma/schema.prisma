@@ -99,10 +99,3 @@ model ProjectMember {
 
   @@unique([userId, projectId])
 }
-
-// model Permission {
-//   id       String @id @default(uuid())
-//   role     Role
-//   resource String
-//   action   String
-// }

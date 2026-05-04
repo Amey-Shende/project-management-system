@@ -16,8 +16,7 @@ const projectSelect = {
   status: true,
   pmId: true,
   tlId: true,
-  startDate: true,
-  endDate: true,
+  techstack: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -30,16 +29,27 @@ export async function getProjectsService(payload: GetProjectsPayload = {}) {
   const parsedPayload = getProjectsSchema.safeParse(payload);
 
   if (!parsedPayload.success) {
-    throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project query"), 400);
+    throw new ServiceError(
+      formatValidationMessage(parsedPayload.error, "Invalid project query"),
+      400,
+    );
   }
 
-  const { status, pmId, tlId } = parsedPayload.data || {};
+  const { status, pmId, tlId, search } = parsedPayload.data || {};
 
   const projects = await prisma.project.findMany({
     where: {
       ...(status ? { status } : {}),
       ...(pmId ? { pmId } : {}),
       ...(tlId ? { tlId } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { description: { contains: search } },
+            ],
+          }
+        : {}),
     },
     select: {
       ...projectSelect,
@@ -134,10 +144,23 @@ export async function createProjectService(payload: CreateProjectPayload) {
   const parsedPayload = createProjectSchema.safeParse(payload);
 
   if (!parsedPayload.success) {
-    throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project data"), 400);
+    throw new ServiceError(
+      formatValidationMessage(parsedPayload.error, "Invalid project data"),
+      400,
+    );
   }
 
-  const { name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
+  const {
+    name,
+    description,
+    status,
+    pmId,
+    tlId,
+    startDate,
+    endDate,
+    teamMembers,
+    techstack,
+  } = parsedPayload.data;
 
   if (pmId) {
     const projectManager = await prisma.user.findUnique({
@@ -169,10 +192,20 @@ export async function createProjectService(payload: CreateProjectPayload) {
     }
   }
 
+  // Remove team members from other projects before adding to new project
+  if (teamMembers && teamMembers.length > 0) {
+    await prisma.projectMember.deleteMany({
+      where: {
+        userId: { in: teamMembers },
+      },
+    });
+  }
+
   const project = await prisma.project.create({
     data: {
       name,
       description,
+      techstack: techstack,
       status: status || "ACTIVE",
       ...(pmId ? { pmId } : {}),
       ...(tlId ? { tlId } : {}),
@@ -183,6 +216,7 @@ export async function createProjectService(payload: CreateProjectPayload) {
             members: {
               create: teamMembers.map((userId) => ({
                 userId,
+                role: "TM",
               })),
             },
           }
@@ -202,17 +236,37 @@ export async function createProjectService(payload: CreateProjectPayload) {
   return project;
 }
 
-export async function updateProjectService(payload: Omit<UpdateProjectPayload, "id">, id: number) {
+export async function updateProjectService(
+  payload: Omit<UpdateProjectPayload, "id">,
+  id: number,
+) {
   const parsedPayload = updateProjectSchema.safeParse({
     ...payload,
     id,
   });
 
   if (!parsedPayload.success) {
-    throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project update data"), 400);
+    throw new ServiceError(
+      formatValidationMessage(
+        parsedPayload.error,
+        "Invalid project update data",
+      ),
+      400,
+    );
   }
 
-  const { id: parsedId, name, description, status, pmId, tlId, startDate, endDate, teamMembers } = parsedPayload.data;
+  const {
+    id: parsedId,
+    name,
+    description,
+    status,
+    pmId,
+    tlId,
+    startDate,
+    endDate,
+    teamMembers,
+    techstack,
+  } = parsedPayload.data;
 
   const existingProject = await prisma.project.findUnique({
     where: { id: parsedId },
@@ -259,17 +313,26 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
 
   // Handle team members update
   if (teamMembers !== undefined) {
-    // Remove existing members
+    // Remove existing members from current project
     await prisma.projectMember.deleteMany({
       where: { projectId: parsedId },
     });
 
-    // Add new members if provided
+    // Remove team members from OTHER projects before adding to current project
     if (teamMembers.length > 0) {
+      await prisma.projectMember.deleteMany({
+        where: {
+          userId: { in: teamMembers },
+          projectId: { not: parsedId },
+        },
+      });
+
+      // Add new members to current project
       await prisma.projectMember.createMany({
         data: teamMembers.map((userId) => ({
           projectId: parsedId,
           userId,
+          role: "TM",
         })),
       });
     }
@@ -285,12 +348,18 @@ export async function updateProjectService(payload: Omit<UpdateProjectPayload, "
       ...(tlId !== undefined ? { tlId } : {}),
       ...(startDate !== undefined ? { startDate } : {}),
       ...(endDate !== undefined ? { endDate } : {}),
+      ...(techstack !== undefined ? { techstack } : {}),
     },
     select: projectSelect,
   });
 
   // Update TL's managerId to PM if both are set
-  if (pmId !== undefined && pmId !== null && tlId !== undefined && tlId !== null) {
+  if (
+    pmId !== undefined &&
+    pmId !== null &&
+    tlId !== undefined &&
+    tlId !== null
+  ) {
     await prisma.user.update({
       where: { id: tlId },
       data: { managerId: pmId },
@@ -304,7 +373,10 @@ export async function deleteProjectService(payload: { id: number }) {
   const parsedPayload = deleteProjectSchema.safeParse(payload);
 
   if (!parsedPayload.success) {
-    throw new ServiceError(formatValidationMessage(parsedPayload.error, "Invalid project id"), 400);
+    throw new ServiceError(
+      formatValidationMessage(parsedPayload.error, "Invalid project id"),
+      400,
+    );
   }
 
   const { id } = parsedPayload.data;

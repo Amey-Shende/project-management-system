@@ -49,11 +49,13 @@ export async function getProjectController(request: Request) {
     const status = searchParams?.get("status") as "ACTIVE" | "COMPLETED" | undefined;
     const pmId = searchParams?.get("pmId") ? Number(searchParams.get("pmId")) : undefined;
     const tlId = searchParams?.get("tlId") ? Number(searchParams.get("tlId")) : undefined;
+    const search = searchParams?.get("search") || undefined;
 
     const payload: Record<string, any> = {};
     if (status) payload.status = status;
     if (pmId) payload.pmId = pmId;
     if (tlId) payload.tlId = tlId;
+    if (search) payload.search = search;
 
     const projects = await getProjectsService(payload);
 
