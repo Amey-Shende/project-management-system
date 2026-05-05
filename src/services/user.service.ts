@@ -480,6 +480,7 @@ export async function updateUserService(
           data: {
             userId: parsedId,
             projectId: assignedProjectId,
+            role: "TM",
           },
         });
       }
