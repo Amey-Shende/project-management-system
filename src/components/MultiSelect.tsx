@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronsDownIcon, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown, ChevronsDownIcon, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ type MultiSelectProps = {
   value: number[];
   onChange: (value: number[]) => void;
   placeholder?: string;
+  selectLabel?: string;
 };
 
 export function MultiSelect({
@@ -29,6 +30,7 @@ export function MultiSelect({
   value,
   onChange,
   placeholder = "Select options",
+  selectLabel = "Select",
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -65,25 +67,37 @@ export function MultiSelect({
           role="combobox"
           className="w-full hover:bg-white font-normal text-start"
         >
-          <span className="truncate flex-1">
-            {selectedLabels.length === 0
-              ? placeholder
-              : selectedLabels.length === options.length
-              ? "All selected"
-              : selectedLabels.length <= 3
-              ? selectedLabels.join(", ")
-              : `${selectedLabels.slice(0, 2).join(", ")} +${selectedLabels.length - 2} more`}
-          </span>
+          <div className="flex flex-1 items-center gap-1 overflow-hidden">
+            {selectedLabels.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {selectedLabels.slice(0, 2).map((label) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                  >
+                    {label}
+                  </span>
+                ))}
+                {selectedLabels.length > 2 && (
+                  <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
+                    +{selectedLabels.length - 2} more
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+          </div>
           <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent 
-        className="w-[var(--radix-popover-trigger-width)] p-0"
+      <PopoverContent
+        className="w-(--radix-popover-trigger-width) p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div 
+        <div
           className="max-h-60 overflow-y-auto scrollbar-thin"
           onWheel={(e) => {
             e.stopPropagation();
@@ -91,9 +105,13 @@ export function MultiSelect({
           }}
         >
           {/* ✅ Select All */}
+          {/* heading of select box */}
+          <p className="px-2 mt-2 text-muted-foreground text-xs">
+            {selectLabel}
+          </p>
           <div
             onClick={toggleAll}
-            className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground relative select-none outline-none transition-colors"
+            className="flex items-center gap-3 px-2 py-1.5 cursor-pointer hover:bg-accent hover:text-accent-foreground relative select-none outline-none transition-colors"
           >
             <Checkbox
               checked={isAllSelected}
@@ -102,7 +120,7 @@ export function MultiSelect({
                   (el as any).indeterminate = isIndeterminate;
                 }
               }}
-              className="border border-gray-300"
+              className="border border-gray-400"
             />
             <span className="text-sm font-medium">Select All</span>
           </div>
@@ -110,15 +128,20 @@ export function MultiSelect({
           {/* ✅ Options */}
           {options.map((option) => {
             const isSelected = value.includes(option.value);
-
             return (
               <div
                 key={option.value}
                 onClick={() => toggleValue(option.value)}
-                className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground relative select-none outline-none transition-colors"
+                className="flex items-center gap-3 px-2 py-1.5 cursor-pointer hover:bg-accent hover:text-accent-foreground relative select-none outline-none transition-colors"
               >
-                <Checkbox checked={isSelected} className="border border-gray-300"/>
+                <Checkbox
+                  checked={isSelected}
+                  className="border border-gray-400"
+                />
                 <span className="text-sm">{option.label}</span>
+                {value.includes(option.value) && (
+                  <Check className="h-4 w-4 text-primary absolute right-2" />
+                )}
               </div>
             );
           })}

@@ -1,24 +1,24 @@
 import { notFound } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TeamAvatars } from "@/components/TeamAvatars";
+import { generateColor } from "@/lib/utils";
+import { removeDuplicatesByKey } from "@/lib/arrayUtils";
+import { getUserByIdService } from "@/services/user.service";
+import { userRole } from "@/lib/constant";
 import {
   ArrowLeft,
-  User,
-  Mail,
-  Phone,
   Briefcase,
   Building2,
   Calendar,
   Code2,
-  CheckCircle,
-  XCircle,
   FolderKanban,
+  Mail,
+  Phone,
+  User,
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { getUserByIdService } from "@/services/user.service";
-import { generateColor } from "@/lib/utils";
-import { userRole } from "@/lib/constant";
 
 export default async function TeamLeadDetailPage({
   params,
@@ -31,7 +31,6 @@ export default async function TeamLeadDetailPage({
   if (!user) {
     notFound();
   }
-
   return (
     <div className="p-3">
       <Link href="/dashboard/team-lead">
@@ -189,7 +188,7 @@ export default async function TeamLeadDetailPage({
           )}
 
         {/* Projects Managed */}
-        {user.leadProjects && user.leadProjects.length > 0 && (
+        {user.memberProjects && user.memberProjects.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -198,25 +197,32 @@ export default async function TeamLeadDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 -mt-5">
-              {user.leadProjects.map((project: any) => (
-                <div key={project.id} className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
-                    {project.name
-                      .split(" ")
-                      .map((p: string) => p[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-base">{project.name}</p>
-                    <Link
-                      href={`/dashboard/projects/${project.id}`}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View Project Details
-                    </Link>
-                  </div>
+              {user.memberProjects?.map((memberProject: any) => (
+                <div
+                  key={memberProject.project.id}
+                  className="flex items-center gap-3"
+                >
+                  <>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
+                      {memberProject.project.name
+                        .split(" ")
+                        .map((p: string) => p[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-base">
+                        {memberProject.project.name}
+                      </p>
+                      <Link
+                        href={`/dashboard/projects/${memberProject.project.id}`}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        View Project Details
+                      </Link>
+                    </div>
+                  </>
                 </div>
               ))}
             </CardContent>
@@ -275,48 +281,84 @@ export default async function TeamLeadDetailPage({
         )}
 
         {/* Manager Information */}
-        {user.manager && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5" />
-                Reports To
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="-mt-5">
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold "
-                  style={{
-                    backgroundColor: generateColor(
-                      user.manager.name,
-                      user.manager.id,
-                    ),
-                  }}
-                >
-                  {user.manager.name
-                    .split(" ")
-                    .map((p) => p[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold">{user.manager.name}</p>
-                  <p className="text-sm text-muted-foreground -mt-1">
-                    {/* {user.manager.email} */}
-                    <Link
-                      href={`/dashboard/project-manager/${user.manager.id}`}
-                      className="text-sm text-blue-600 hover:text-blue-700"
+        {(() => {
+          const onlyManager = user?.manager as
+            | { id: number; name: string }
+            | undefined;
+          const projectManagers = user?.memberProjects
+            ?.map(
+              (val: {
+                manager: {
+                  id: number;
+                  name: string;
+                  email: string;
+                  role: any;
+                } | null;
+              }) => val.manager,
+            )
+            .filter(
+              (
+                manager,
+              ): manager is {
+                id: number;
+                name: string;
+                email: string;
+                role: any;
+              } => manager !== null,
+            );
+          const managers =
+            projectManagers && projectManagers.length > 0
+              ? projectManagers
+              : onlyManager
+                ? [onlyManager]
+                : [];
+
+          const uniqueUsers =  removeDuplicatesByKey(managers, "id");
+
+          return uniqueUsers.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5" />
+                  Reports To
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="-mt-5 space-y-3">
+                {uniqueUsers.map((manager: any) => (
+                  <div key={manager.id} className="flex items-center gap-3">
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold "
+                      style={{
+                        backgroundColor: generateColor(
+                          manager.name,
+                          manager.id,
+                        ),
+                      }}
                     >
-                      View Profile
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                      {manager.name
+                        .split(" ")
+                        .map((p: string) => p[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{manager.name}</p>
+                      <p className="text-sm text-muted-foreground -mt-1">
+                        <Link
+                          href={`/dashboard/project-manager/${manager.id}`}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          View Profile
+                        </Link>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null;
+        })()}
       </div>
     </div>
   );

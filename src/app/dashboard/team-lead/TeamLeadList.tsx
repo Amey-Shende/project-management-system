@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSearchParams } from "next/navigation";
+import { TeamAvatars } from "@/components/TeamAvatars";
 
 const columns: TableColumn<User>[] = [
   {
@@ -73,11 +74,30 @@ const columns: TableColumn<User>[] = [
     key: "pm",
     label: "Project Manager",
     width: "w-[15%]",
-    renderCell: (user) => (
-      <div className="text-sm">
-        {user.manager?.name || <div className="ms-2">-</div>}
-      </div>
-    ),
+    renderCell: (user) => {
+      const onlyManager = user?.manager as
+        | { id: string; name: string }
+        | undefined;
+      const projectManagers = user?.memberProjects?.map(
+        (val: { manager: { id: string; name: string } }) => val.manager,
+      );
+
+      const managers =
+        projectManagers && projectManagers.length > 0
+          ? projectManagers
+          : onlyManager
+            ? [onlyManager]
+            : [];
+
+      return (
+        <TeamAvatars
+          members={managers as any}
+          emptyMessage="-"
+          showNameWhenSingle={true}
+          size="sm"
+        />
+      );
+    },
   },
   {
     key: "teamMembersCount",
@@ -86,7 +106,7 @@ const columns: TableColumn<User>[] = [
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
         <Users className="h-3.5 w-3.5" />
-        {user.subordinates?.length || 0}
+        {user._count?.managedProjects || 0}
       </div>
     ),
   },
@@ -97,7 +117,7 @@ const columns: TableColumn<User>[] = [
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
         <FolderKanban className="h-3.5 w-3.5" />
-        {user.leadProjects?.length || 0}
+        {user.memberProjects?.length || 0}
       </div>
     ),
   },
@@ -135,15 +155,20 @@ export interface User extends Record<string, unknown> {
     name?: string;
     email?: string;
   } | null;
-  leadProjects?: Array<{
-    id: number;
-    name?: string;
-  }>;
   subordinates?: Array<{
     id: number;
     name?: string;
     email?: string;
   }>;
+  memberProjects?: Array<{
+    manager: {
+      id: string;
+      name: string;
+    };
+  }>;
+  _count: {
+    managedProjects: number;
+  };
 }
 
 interface TeamLeadListProps {
@@ -267,7 +292,7 @@ function TeamLeadList({ initialData }: TeamLeadListProps) {
                 description: (row) =>
                   `"${row.name}" will be removed permanently.`,
               }}
-              isDeleteDisabled={(row) => (row.leadProjects?.length || 0) > 0}
+              isDeleteDisabled={(row) => (row.memberProjects?.length || 0) > 0}
               deleteDisabledMessage="Please unassign from all projects before deleting"
             />
           </CardContent>

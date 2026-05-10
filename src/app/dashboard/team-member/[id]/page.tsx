@@ -31,7 +31,18 @@ export default async function TeamMemberDetailPage({
     notFound();
   }
 
-  const assignedProject = user.memberProjects?.[0]?.project;
+  // Determine which manager to show: project-specific if assigned, otherwise user's default manager
+  const projectManager = user.memberProjects?.[0]?.manager;
+  const defaultManager = user.manager;
+  const displayManager = projectManager || defaultManager;
+
+  // Get all unique TLs from all project assignments
+  const allTLs = user.memberProjects
+    ?.filter((mp: any) => mp.manager && mp.manager.role === "TL")
+    .map((mp: any) => mp.manager)
+    .filter((manager: any, index: number, self: any[]) =>
+      index === self.findIndex((m: any) => m.id === manager.id)
+    ) || [];
 
   return (
     <div className="p-3">
@@ -189,67 +200,83 @@ export default async function TeamMemberDetailPage({
             </Card>
           )}
 
-        {/* Assigned Project */}
-        {assignedProject && (
+        {/* Assigned Projects */}
+        {user.memberProjects && user.memberProjects.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FolderKanban className="h-5 w-5" />
-                Assigned Project
+                Assigned Project{user.memberProjects.length > 1 ? "s" : ""} ({user.memberProjects.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 -mt-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
-                  {assignedProject.name
-                    .split(" ")
-                    .map((p) => p[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
+            <CardContent className="space-y-3 -mt-5">
+              {user.memberProjects.map((mp: any) => (
+                <div key={mp.id} className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
+                    {mp.project.name
+                      .split(" ")
+                      .map((p: string) => p[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{mp.project.name}</p>
+                    <Link
+                      href={`/dashboard/projects/${mp.project.id}`}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      View Project Details
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold">{assignedProject.name}</p>
-                  <Link
-                    href={`/dashboard/projects/${assignedProject.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    View Project Details
-                  </Link>
-                </div>
-              </div>
-              {assignedProject.projectManager && (
-                <div className="flex items-center gap-3 pt-4 border-t">
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Team Leads */}
+        {allTLs.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5" />
+                Report To
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 -mt-5">
+              {allTLs?.map((tl: any) => (
+                <div key={tl.id} className="flex items-center gap-3">
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                     style={{
-                      backgroundColor: generateColor(
-                        assignedProject.projectManager.name,
-                        assignedProject.projectManager.id,
-                      ),
+                      backgroundColor: generateColor(tl.name, tl.id),
                     }}
                   >
-                    {assignedProject.projectManager.name
+                    {tl.name
                       .split(" ")
-                      .map((p) => p[0])
+                      .map((p: string) => p[0])
                       .join("")
                       .slice(0, 2)
                       .toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-medium">Project Manager</p>
-                    <p className="text-sm text-muted-foreground">
-                      {assignedProject.projectManager.name}
-                    </p>
+                    <p className="font-semibold">{tl.name}</p>
+                    <Link
+                      href={`/dashboard/team-lead/${tl.id}`}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      View Profile
+                    </Link>
                   </div>
                 </div>
-              )}
+              ))}
             </CardContent>
           </Card>
         )}
 
         {/* Manager Information */}
-        {user.manager && (
+        {/* {displayManager && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -263,23 +290,23 @@ export default async function TeamMemberDetailPage({
                   className="flex h-8 w-8 items-center justify-center rounded-full  text-sm font-semibold "
                   style={{
                     backgroundColor: generateColor(
-                      user.manager.name,
-                      user.manager.id,
+                      displayManager.name,
+                      displayManager.id,
                     ),
                   }}
                 >
-                  {user.manager.name
+                  {displayManager.name
                     .split(" ")
-                    .map((p) => p[0])
+                    .map((p: string) => p[0])
                     .join("")
                     .slice(0, 2)
                     .toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold">{user.manager.name}</p>
+                  <p className="font-semibold">{displayManager.name}</p>
                   <p className="-mt-1">
                     <Link
-                      href={`/dashboard/team-lead/${user.manager.id}`}
+                      href={`/dashboard/${displayManager.role === "PM" ? "project-manager" : "team-lead"}/${displayManager.id}`}
                       className="text-sm text-blue-600 hover:text-blue-700 "
                     >
                       View Profile
@@ -289,7 +316,7 @@ export default async function TeamMemberDetailPage({
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
       </div>
     </div>
   );

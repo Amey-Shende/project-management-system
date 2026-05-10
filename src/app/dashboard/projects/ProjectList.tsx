@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { ProjectFilter } from "./ProjectFilter";
 import { ProjectDialog } from "./ProjectDialog";
 import { Users } from "lucide-react";
-import api from "@/lib/axios";
-import { toast } from "sonner";
 import Link from "next/link";
 import { generateColor } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
+import { TeamAvatars } from "@/components/TeamAvatars";
+import { toast } from "sonner";
+import api from "@/lib/axios";
 
 export interface Project extends Record<string, unknown> {
   id: number;
@@ -18,14 +19,14 @@ export interface Project extends Record<string, unknown> {
   status: "ACTIVE" | "COMPLETED";
   updatedAt: Date;
   techstack?: unknown;
-  projectManager?: {
-    id: number;
-    name: string;
-  } | null;
-  teamLead?: {
-    id: number;
-    name: string;
-  } | null;
+  members: Array<{
+    user: {
+      id: number;
+      name: string;
+      role: string;
+    };
+    role: string;
+  }>;
   _count: {
     members: number;
   };
@@ -36,34 +37,23 @@ export interface ProjectFull extends Record<string, unknown> {
   name: string;
   description: string | null;
   status: "ACTIVE" | "COMPLETED";
-  pmId: number | null;
-  tlId: number | null;
   techstack?: unknown;
+  priority: "LOW" | "MEDIUM" | "HIGH";
   startDate: Date | null;
   endDate: Date | null;
+  progress: number;
   createdAt: Date;
   updatedAt: Date;
   members: Array<{
-    userId: number;
     user: {
       id: number;
       name: string;
       email: string;
       role: string;
     };
+    role: string;
+    assignedAt: Date;
   }>;
-  projectManager: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
-  teamLead: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
   _count: {
     members: number;
   };
@@ -113,73 +103,35 @@ const columns: TableColumn<Project>[] = [
     key: "projectManager",
     label: "Project Manager",
     width: "w-[17%]",
-    renderCell: (project) => (
-      <div className="flex items-center gap-2">
-        {project.projectManager?.name ? (
-          <>
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-              style={{
-                backgroundColor: generateColor(
-                  project.projectManager?.name,
-                  project.projectManager?.id,
-                ),
-              }}
-            >
-              {project.projectManager?.name
-                .split(" ")
-                .map((p) => p[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase() || "PM"}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {project.projectManager?.name || "Not assigned"}
-              </p>
-            </div>
-          </>
-        ) : (
-          <span className="text-sm text-muted-foreground">Not assigned</span>
-        )}
-      </div>
-    ),
+    renderCell: (project) => {
+      const pm = project.members?.filter((m: any) => m.role === "PM")?.map((m: any) => m.user);
+      return (
+        <TeamAvatars
+          members={pm || []}
+          emptyMessage="Not assigned"
+          showNameWhenSingle={true}
+          size="sm"
+        />
+      );
+    },
   },
   {
     key: "teamLead",
     label: "Team Lead",
     width: "w-[17%]",
-    renderCell: (project) => (
-      <div className="flex items-center gap-2">
-        {project.teamLead?.name ? (
-          <>
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-              style={{
-                backgroundColor: generateColor(
-                  project.teamLead?.name,
-                  project.teamLead?.id,
-                ),
-              }}
-            >
-              {project.teamLead?.name
-                .split(" ")
-                .map((p) => p[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase() || "TL"}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {project.teamLead?.name || "Not assigned"}
-              </p>
-            </div>
-          </>
-        ) : (
-          <span className="text-sm text-muted-foreground">Not assigned</span>
-        )}
-      </div>
-    ),
+    renderCell: (project) => {
+      const tl = project.members
+        ?.filter((m: any) => m.role === "TL")
+        ?.map((m: any) => m.user);
+      return (
+        <TeamAvatars
+          members={tl || []}
+          emptyMessage="Not assigned"
+          showNameWhenSingle={true}
+          size="sm"
+        />
+      );
+    },
   },
   {
     key: "teamSize",
@@ -222,7 +174,7 @@ interface ProjectListProps {
 
 function ProjectList({ initialData }: ProjectListProps) {
   const searchParams = useSearchParams();
-  const searchbox = searchParams.get("search")
+  const searchbox = searchParams.get("search");
   const [projects, setProjects] = useState<Project[]>(initialData);
   const [editingProject, setEditingProject] = useState<
     ProjectFull | undefined
@@ -274,8 +226,11 @@ function ProjectList({ initialData }: ProjectListProps) {
 
   // Refetch projects when search params change
   useEffect(() => {
-    
-    fetchProjects({ search: searchbox || undefined, status: statusFilter, pmId: pmFilter });
+    fetchProjects({
+      search: searchbox || undefined,
+      status: statusFilter,
+      pmId: pmFilter,
+    });
   }, [searchbox]);
 
   useEffect(() => {
@@ -287,15 +242,14 @@ function ProjectList({ initialData }: ProjectListProps) {
     name?: string;
     description?: string;
     status?: "ACTIVE" | "COMPLETED";
-    pmId?: number;
-    tlId?: number;
+    pmIds?: number[];
+    tlIds?: number[];
     startDate?: Date;
     endDate?: Date;
     teamMembers?: number[];
   }) => {
     try {
-      const { id, ...data } = projectData;
-      const res = await api.patch(`/project/${id}`, data);
+      const res = await api.patch(`/project/${projectData.id}`, projectData);
       if (res.status !== 200) throw new Error("Failed to update project");
       await fetchProjects({
         search: searchParams.get("search") || undefined,
@@ -329,8 +283,8 @@ function ProjectList({ initialData }: ProjectListProps) {
     name: string;
     description?: string;
     status?: "ACTIVE" | "COMPLETED";
-    pmId?: number;
-    tlId?: number;
+    pmIds?: number[];
+    tlIds?: number[];
     startDate?: Date;
     endDate?: Date;
     teamMembers?: number[];
@@ -338,8 +292,7 @@ function ProjectList({ initialData }: ProjectListProps) {
     try {
       const res = await api.post("/project", projectData);
       if (res.status !== 201) throw new Error("Failed to create project");
-      const data = res.data.data;
-      setProjects([data, ...projects]);
+      setProjects([res.data.data as Project, ...projects]);
       toast.success("Project created successfully");
     } catch (error) {
       console.error("Error creating project:", error);
@@ -347,15 +300,22 @@ function ProjectList({ initialData }: ProjectListProps) {
     }
   };
 
-
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
-    fetchProjects({ search: searchParams.get("search") || undefined, status: value, pmId: pmFilter });
+    fetchProjects({
+      search: searchParams.get("search") || undefined,
+      status: value,
+      pmId: pmFilter,
+    });
   };
 
   const handlePMChange = (value: string) => {
     setPMFilter(value);
-    fetchProjects({ search: searchParams.get("search") || undefined, status: statusFilter, pmId: value });
+    fetchProjects({
+      search: searchParams.get("search") || undefined,
+      status: statusFilter,
+      pmId: value,
+    });
   };
 
   const handleEditClick = async (project: Project) => {

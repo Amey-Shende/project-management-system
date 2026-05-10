@@ -30,15 +30,7 @@ import {
 import { z } from "zod";
 import { renderRequired } from "@/lib/renderRequired";
 import api from "@/lib/axios";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/MultiSelect";
 
 const baseSchema = z.object({
   name: z
@@ -60,8 +52,8 @@ const baseSchema = z.object({
     .optional(),
   phone: z.string().max(10, "Phone must be at most 10 digit").optional(),
   skills: z.string().optional(),
-  assignedProjectId: z.number().nullable().optional(),
-  managerId: z.number().nullable().optional(),
+  assignedProjectIds: z.array(z.number()).optional(),
+  managerIds: z.array(z.number()).optional(),
 });
 
 interface TMDialogProps {
@@ -77,8 +69,8 @@ interface TMDialogProps {
     department?: string;
     phone?: string;
     skills?: string[];
-    assignedProjectId?: number | null;
-    managerId?: number | null;
+    assignedProjectIds?: number[];
+    managerIds?: number[];
   }) => void;
   onUpdate: (userData: {
     id: number;
@@ -90,10 +82,19 @@ interface TMDialogProps {
     department?: string;
     phone?: string;
     skills?: string[];
-    assignedProjectId?: number | null;
-    managerId?: number | null;
+    assignedProjectIds?: number[];
+    managerIds?: number[];
   }) => void;
 }
+
+const getManagerIds = (user: any) => {
+  if (user?.memberProjects && user?.memberProjects?.length > 0) {
+    const result = user?.memberProjects?.map((mp: any) => mp?.manager?.id);
+    const set = new Set(result);
+    return Array.from(set);
+  }
+  return user?.managerId ? [user.managerId] : [];
+};
 
 export function TMDialog({
   user,
@@ -103,7 +104,7 @@ export function TMDialog({
   onUpdate,
 }: TMDialogProps) {
   const [projects, setProjects] = useState<
-    { id: number; name: string; teamLead?: { id: number; name: string } }[]
+    { id: number; name: string; members: [{ user: { id: number; name: string; role: string } } | null] }[]
   >([]);
   const [teamLeads, setTeamLeads] = useState<{ id: number; name: string }[]>([]);
   const formSchema = baseSchema;
@@ -121,8 +122,8 @@ export function TMDialog({
       department: "",
       phone: "",
       skills: "",
-      assignedProjectId: undefined,
-      managerId: undefined,
+      assignedProjectIds: [],
+      managerIds: [],
     },
   });
 
@@ -137,10 +138,8 @@ export function TMDialog({
         department: user.department || "",
         phone: user.phone || "",
         skills: user.skills?.join(", ") || "",
-        assignedProjectId:
-          user.memberProjects?.[0]?.project?.id ||
-          (user as any).assignedProjectId,
-        managerId: user.managerId,
+        assignedProjectIds: user.memberProjects?.map((mp: any) => mp.project.id) || [],
+        managerIds: getManagerIds(user) as number[],
       });
     } else if (open) {
       form.reset({
@@ -152,8 +151,8 @@ export function TMDialog({
         department: "",
         phone: "",
         skills: "",
-        assignedProjectId: undefined,
-        managerId: undefined,
+        assignedProjectIds: [],
+        managerIds: [],
       });
     }
   }, [user, open, form]);
@@ -178,16 +177,21 @@ export function TMDialog({
     }
   }, [open]);
 
-  const assignedProjectId = form.watch("assignedProjectId");
+  const assignedProjectIds = form.watch("assignedProjectIds");
 
   useEffect(() => {
-    // TODO: Add any additional logic here if needed
-    if (assignedProjectId && open) {
-      const project = projects.find((p) => p.id === assignedProjectId);
-      const managerId = project?.teamLead?.id;
-      form.setValue("managerId", managerId);
-    }
-  }, [assignedProjectId, open]);
+    if (assignedProjectIds && assignedProjectIds.length > 0 && open) {
+      const selectedProjects = projects.filter((p) => assignedProjectIds.includes(p.id));
+      const managerIds = selectedProjects
+        .flatMap((project) =>
+          project.members
+            ?.filter((member) => member?.user?.role === "TL")
+            .map((member) => member?.user?.id)
+        )
+        .filter((id): id is number => id !== undefined);
+      form.setValue("managerIds", managerIds);
+    } 
+  }, [assignedProjectIds, open, projects, form]);
 
   const {
     handleSubmit,
@@ -206,6 +210,7 @@ export function TMDialog({
 
     if (user?.id) {
       onUpdate({ ...payload, id: user.id });
+      // console.log(payload);
     } else {
       onSave(payload as any);
     }
@@ -366,39 +371,20 @@ export function TMDialog({
               )}
             />
 
-            {/* Assigned Project */}
+            {/* Assigned Projects */}
             <Controller
-              name="assignedProjectId"
+              name="assignedProjectIds"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>Assigned Project</FieldLabel>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
-                      <FolderKanban className="h-4 w-4 mt-1" />
-                    </span>
-                    <Select
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectTrigger className="h-10! pl-10 w-full">
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Projects</SelectLabel>
-                          {projects.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <FieldLabel>Assigned Projects</FieldLabel>
+                  <MultiSelect
+                    options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select projects"
+                    selectLabel="Projects"
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}
@@ -406,37 +392,18 @@ export function TMDialog({
 
             {/* Manager/Team Lead */}
             <Controller
-              name="managerId"
+              name="managerIds"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel>Reports To</FieldLabel>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
-                      <UserRound className="h-4 w-4 mt-1" />
-                    </span>
-                    <Select
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectTrigger className="h-10! pl-10 w-full">
-                        <SelectValue placeholder="Select team lead" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Team Leads</SelectLabel>
-                          {teamLeads?.map((tl) => (
-                            <SelectItem key={tl.id} value={String(tl.id)}>
-                              {tl.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <MultiSelect
+                    options={teamLeads.map((tl) => ({ value: tl.id, label: tl.name }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select team leads"
+                    selectLabel="Team Leads"
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

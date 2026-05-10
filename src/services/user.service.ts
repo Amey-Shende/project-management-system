@@ -1,15 +1,47 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ServiceError } from "@/lib/ServiceError";
-import { z } from "zod";
+import { number, z } from "zod";
 import {
-  changePasswordSchema,
   createUserSchema,
+  updateUserSchema,
   deleteUserSchema,
   getUsersSchema,
-  updateUserSchema,
+  changePasswordSchema,
 } from "@/validations/userSchema";
 import { formatValidationMessage } from "@/lib/utils";
+
+// Helper function to get subordinates from ProjectMember
+async function getProjectSubordinates(userId: number) {
+  const projectSubordinates = await prisma.projectMember.findMany({
+    where: {
+      managerId: userId,
+    },
+    select: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  // Remove duplicates by user ID
+  const uniqueSubordinates = projectSubordinates.reduce(
+    (acc, pm) => {
+      if (!acc.find((s) => s.id === pm.user.id)) {
+        acc.push(pm.user);
+      }
+      return acc;
+    },
+    [] as Array<{ id: number; name: string; email: string; role: string }>,
+  );
+
+  return uniqueSubordinates;
+}
 
 // Optimized select for list views - only essential fields
 const userListSelect = {
@@ -28,12 +60,19 @@ const userListSelect = {
   },
 } as const;
 
-// For Team Member list - adds memberProjects
+// For Team Member list - adds memberProjects with manager info
 const teamMemberListSelect = {
   ...userListSelect,
   memberProjects: {
     select: {
+      id: true,
       project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      manager: {
         select: {
           id: true,
           name: true,
@@ -43,22 +82,41 @@ const teamMemberListSelect = {
   },
 } as const;
 
-// For Team Lead list - adds leadProjects and subordinates
+// For Team Lead list - adds memberProjects (filtered for TL role) and subordinates
 const teamLeadListSelect = {
   ...userListSelect,
   department: true,
   phone: true,
   skills: true,
-  leadProjects: {
+  memberProjects: {
+    where: {
+      role: "TL",
+    },
     select: {
-      id: true,
-      name: true,
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      manager: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   },
-  subordinates: {
+  managedProjects: {
+    where: {
+      role: "TM",
+    },
     select: {
-      id: true,
-      name: true,
+      user: {
+        select: {
+          id: true,
+        },
+      },
     },
   },
 } as const;
@@ -100,12 +158,7 @@ const userEditSelect = {
           name: true,
         },
       },
-    },
-  },
-  leadProjects: {
-    select: {
-      id: true,
-      name: true,
+      role: true,
     },
   },
 } as const;
@@ -134,25 +187,22 @@ const userDetailSelect = {
   },
   memberProjects: {
     select: {
+      id: true,
       project: {
         select: {
           id: true,
           name: true,
-          projectManager: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
         },
       },
-    },
-  },
-  leadProjects: {
-    select: {
-      id: true,
-      name: true,
+      role: true,
+      manager: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
     },
   },
   subordinates: {
@@ -206,12 +256,14 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
     const users = await prisma.user.findMany({
       where: {
         role: "PM",
-        ...(search ? {
-          OR: [
-            { name: { contains: search } },
-            { email: { contains: search } },
-          ],
-        } : {}),
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search } },
+                { email: { contains: search } },
+              ],
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -238,18 +290,26 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
       },
     });
 
-    // Fetch project statistics for each PM
+    // Fetch project statistics for each PM via ProjectMember
     const usersWithProjectStats = await Promise.all(
       users.map(async (user) => {
-        const projects = await prisma.project.findMany({
-          where: { pmId: user.id },
-          select: {
-            id: true,
-            name: true,
-            status: true,
+        const projectMembers = await prisma.projectMember.findMany({
+          where: {
+            userId: user.id,
+            role: "PM",
+          },
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+              },
+            },
           },
         });
 
+        const projects = projectMembers.map((pm) => pm.project);
         const activeProjects = projects.filter(
           (p) => p.status === "ACTIVE",
         ).length;
@@ -283,18 +343,37 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
   const users = await prisma.user.findMany({
     where: {
       ...(role ? { role } : {}),
-      ...(search ? {
-        OR: [
-          { name: { contains: search } },
-          { email: { contains: search } },
-        ],
-      } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { email: { contains: search } },
+            ],
+          }
+        : {}),
     },
     select: selectObject,
     orderBy: {
       createdAt: "desc",
     },
   });
+
+  // For TLs, calculate unique TM count from managedProjects
+  if (role === "TL") {
+    const usersWithUniqueTMCount = users.map((user) => {
+      const managedProjects = (user as any).managedProjects || [];
+      const uniqueTMIds = new Set(
+        managedProjects.map((mp: any) => mp?.user?.id).filter(Boolean),
+      );
+      return {
+        ...user,
+        _count: {
+          managedProjects: uniqueTMIds.size,
+        },
+      };
+    });
+    return usersWithUniqueTMCount;
+  }
 
   return users;
 }
@@ -315,12 +394,23 @@ export async function createUserService(payload: CreateUserPayload) {
     password,
     role,
     managerId,
+    managerIds,
     designation,
     department,
     phone,
     skills,
-    assignedProjectId,
+    assignedProjectIds,
   } = parsedPayload.data;
+
+  // Determine the managerId to store in User table
+  // If no projects assigned, use the first manager from managerIds array
+  // If projects assigned, managerId will be stored in ProjectMember table instead
+  const userTableManagerId =
+    (!assignedProjectIds || assignedProjectIds.length === 0) &&
+    managerIds &&
+    managerIds.length > 0
+      ? managerIds[0]
+      : managerId;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -331,9 +421,9 @@ export async function createUserService(payload: CreateUserPayload) {
     throw new ServiceError("Email already registered", 409);
   }
 
-  if (managerId) {
+  if (userTableManagerId) {
     const manager = await prisma.user.findUnique({
-      where: { id: managerId },
+      where: { id: userTableManagerId },
       select: { id: true },
     });
 
@@ -352,7 +442,7 @@ export async function createUserService(payload: CreateUserPayload) {
       email,
       password: hashedPassword,
       role,
-      managerId,
+      managerId: userTableManagerId,
       designation,
       department,
       phone,
@@ -362,25 +452,37 @@ export async function createUserService(payload: CreateUserPayload) {
   });
 
   // Handle project assignment based on role
-  if (assignedProjectId) {
+  if (assignedProjectIds && assignedProjectIds.length > 0) {
     if (role === "TM") {
-      // Add TM as project member
-      await prisma.projectMember.create({
-        data: {
-          userId: user.id,
-          projectId: assignedProjectId,
-          role: "TM",
-        },
-      });
+      // Add TM as project member for each project
+      await Promise.all(
+        assignedProjectIds.map((projectId) =>
+          prisma.projectMember.create({
+            data: {
+              userId: user.id,
+              projectId,
+              role: "TM",
+              managerId:
+                managerIds && managerIds.length > 0 ? managerIds[0] : undefined,
+            },
+          }),
+        ),
+      );
     } else if (role === "TL") {
-      // Assign TL to project via tlId
-      await prisma.project.update({
-        where: { id: assignedProjectId },
-        data: {
-          tlId: user.id,
-          pmId: user.managerId,
-        },
-      });
+      // Add TL as project member via ProjectMember for each project
+      await Promise.all(
+        assignedProjectIds.map((projectId) =>
+          prisma.projectMember.create({
+            data: {
+              userId: user.id,
+              projectId,
+              role: "TL",
+              managerId:
+                managerIds && managerIds.length > 0 ? managerIds[0] : undefined,
+            },
+          }),
+        ),
+      );
     }
   }
 
@@ -409,12 +511,23 @@ export async function updateUserService(
     email,
     role,
     managerId,
+    managerIds,
     designation,
     department,
     phone,
     skills,
-    assignedProjectId,
+    assignedProjectIds,
   } = parsedPayload.data;
+
+  // Determine the managerId to store in User table
+  // If no projects assigned, use the first manager from managerIds array
+  // If projects assigned, managerId will be stored in ProjectMember table instead
+  const userTableManagerId =
+    (!assignedProjectIds || assignedProjectIds.length === 0) &&
+    managerIds &&
+    managerIds.length > 0
+      ? managerIds[0]
+      : managerId;
 
   const existingUser = await prisma.user.findUnique({
     where: { id: parsedId },
@@ -436,13 +549,13 @@ export async function updateUserService(
     }
   }
 
-  if (managerId !== undefined && managerId !== null) {
-    if (managerId === parsedId) {
+  if (userTableManagerId !== undefined && userTableManagerId !== null) {
+    if (userTableManagerId === parsedId) {
       throw new ServiceError("User cannot be their own manager", 400);
     }
 
     const manager = await prisma.user.findUnique({
-      where: { id: managerId },
+      where: { id: userTableManagerId },
       select: { id: true },
     });
 
@@ -457,7 +570,9 @@ export async function updateUserService(
       ...(name !== undefined ? { name } : {}),
       ...(email !== undefined ? { email } : {}),
       ...(role !== undefined ? { role } : {}),
-      ...(managerId !== undefined ? { managerId } : {}),
+      ...(userTableManagerId !== undefined
+        ? { managerId: userTableManagerId }
+        : {}),
       ...(designation !== undefined ? { designation } : {}),
       ...(department !== undefined ? { department } : {}),
       ...(phone !== undefined ? { phone } : {}),
@@ -467,39 +582,57 @@ export async function updateUserService(
   });
 
   // Handle project assignment based on role
-  if (assignedProjectId !== undefined) {
+  if (assignedProjectIds !== undefined) {
     if (role === "TM") {
-      // Remove existing project memberships
+      // Remove existing project memberships for TM role
       await prisma.projectMember.deleteMany({
-        where: { userId: parsedId },
+        where: { userId: parsedId, role: "TM" },
       });
 
-      // Add new project assignment if provided
-      if (assignedProjectId !== null) {
-        await prisma.projectMember.create({
-          data: {
-            userId: parsedId,
-            projectId: assignedProjectId,
-            role: "TM",
-          },
-        });
+      // Add new project assignments if provided
+      if (assignedProjectIds.length > 0) {
+        await Promise.all(
+          assignedProjectIds.map((projectId) =>
+            prisma.projectMember.create({
+              data: {
+                userId: parsedId,
+                projectId,
+                role: "TM",
+                managerId:
+                  managerIds && managerIds.length > 0
+                    ? managerIds[0]
+                    : undefined,
+              },
+            }),
+          ),
+        );
       }
     } else if (role === "TL") {
       // Remove user from any projects they were TL of
-      await prisma.project.updateMany({
-        where: { tlId: parsedId },
-        data: { tlId: null },
+      await prisma.projectMember.deleteMany({
+        where: {
+          userId: parsedId,
+          role: "TL",
+        },
       });
 
-      // Assign TL to new project if provided
-      if (assignedProjectId !== null) {
-        await prisma.project.update({
-          where: { id: assignedProjectId },
-          data: {
-            tlId: parsedId,
-            pmId: managerId,
-          },
-        });
+      // Assign TL to new projects if provided
+      if (assignedProjectIds.length > 0) {
+        await Promise.all(
+          assignedProjectIds.map((projectId) =>
+            prisma.projectMember.create({
+              data: {
+                userId: parsedId,
+                projectId,
+                role: "TL",
+                managerId:
+                  managerIds && managerIds.length > 0
+                    ? managerIds[0]
+                    : undefined,
+              },
+            }),
+          ),
+        );
       }
     }
   }
@@ -517,7 +650,27 @@ export async function getUserByIdService(id: number) {
     throw new ServiceError("User not found", 404);
   }
 
-  return user;
+  // Get subordinates from ProjectMember (project-specific managers)
+  const projectSubordinates = await getProjectSubordinates(id);
+
+  // Combine subordinates from User table and ProjectMember, removing duplicates
+  const allSubordinates = [
+    ...(user.subordinates || []),
+    ...projectSubordinates,
+  ].reduce(
+    (acc, sub) => {
+      if (!acc.find((s) => s.id === sub.id)) {
+        acc.push(sub);
+      }
+      return acc;
+    },
+    [] as Array<{ id: number; name: string; email: string }>,
+  );
+
+  return {
+    ...user,
+    subordinates: allSubordinates,
+  };
 }
 
 export async function getUserProfileService(id: number) {
@@ -601,12 +754,19 @@ export async function getProjectManagerDetailService(id: number) {
 
   // Fetch projects managed by this PM
   const projects = await prisma.project.findMany({
-    where: { pmId: id },
+    where: { id },
     include: {
-      teamLead: {
+      members: {
         select: {
           id: true,
-          name: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          role: true,
         },
       },
       _count: {

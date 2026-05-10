@@ -31,15 +31,7 @@ import {
 import { z } from "zod";
 import { renderRequired } from "@/lib/renderRequired";
 import api from "@/lib/axios";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/MultiSelect";
 
 const baseSchema = z.object({
   name: z
@@ -60,8 +52,8 @@ const baseSchema = z.object({
     .optional(),
   phone: z.string().max(10, "Phone must be at most 10 digit").optional(),
   skills: z.string().optional(),
-  assignedProjectId: z.number().nullable().optional(),
-  managerId: z.number().nullable().optional(),
+  assignedProjectIds: z.array(z.number()).optional(),
+  managerIds: z.array(z.number()).optional(),
 });
 
 const updateSchema = baseSchema.extend({
@@ -89,8 +81,8 @@ interface TLDialogProps {
     department?: string;
     phone?: string;
     skills?: string[];
-    managerId?: number | null;
-    assignedProjectId?: number | null;
+    managerIds?: number[];
+    assignedProjectIds?: number[];
   }) => void;
   onUpdate: (userData: {
     id: number;
@@ -102,10 +94,19 @@ interface TLDialogProps {
     department?: string;
     phone?: string;
     skills?: string[];
-    managerId?: number | null;
-    assignedProjectId?: number | null;
+    managerIds?: number[];
+    assignedProjectIds?: number[];
   }) => void;
 }
+
+const getManagerIds = (user: any) => {
+  if (user?.memberProjects && user?.memberProjects?.length > 0) {
+    const result = user?.memberProjects?.map((mp: any) => mp?.manager?.id);
+    const set = new Set(result);
+    return Array.from(set);
+  }
+  return user?.managerId ? [user.managerId] : [];
+};
 
 export function TLDialog({
   user,
@@ -122,13 +123,13 @@ export function TLDialog({
     {
       id: number;
       name: string;
-      projectManager: { id: number; name: string } | null;
+      members:[ { user: { id: number; name: string; role: string } } | null];
     }[]
   >([]);
   const isEditMode = !!user?.id;
   const formSchema = user ? updateSchema : createSchema;
   type FormData = z.infer<typeof formSchema>;
-
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
@@ -141,8 +142,8 @@ export function TLDialog({
       department: "",
       phone: "",
       skills: "",
-      managerId: undefined,
-      assignedProjectId: undefined,
+      managerIds: [],
+      assignedProjectIds: [],
     },
   });
 
@@ -157,8 +158,9 @@ export function TLDialog({
         department: user.department || "",
         phone: user.phone || "",
         skills: user.skills?.join(", ") || "",
-        managerId: user.managerId,
-        assignedProjectId: user.leadProjects?.find((p: any) => p.id)?.id || undefined,
+        assignedProjectIds:
+          user.memberProjects?.map((mp: any) => mp.project.id) || [],
+        managerIds: getManagerIds(user) as number[],
       });
     } else if (open) {
       form.reset({
@@ -170,8 +172,8 @@ export function TLDialog({
         department: "",
         phone: "",
         skills: "",
-        managerId: undefined,
-        assignedProjectId: undefined,
+        managerIds: [],
+        assignedProjectIds: [],
       });
     }
   }, [user, open, form]);
@@ -197,7 +199,7 @@ export function TLDialog({
     }
   }, [open]);
 
-  const assignedProjectId = form.watch("assignedProjectId");
+  const assignedProjectIds = form.watch("assignedProjectIds");
 
   const {
     handleSubmit,
@@ -218,6 +220,7 @@ export function TLDialog({
 
     if (user?.id) {
       onUpdate({ ...payload, id: user.id });
+      // console.log(payload);
     } else {
       onSave(payload as any);
     }
@@ -226,14 +229,18 @@ export function TLDialog({
   };
 
   useEffect(() => {
-    if (assignedProjectId && open) {
-      const selectedProjects = projects.filter(
-        (project) => assignedProjectId === project.id,
-      );
-      const projectManager = selectedProjects[0]?.projectManager?.id;
-      form.setValue("managerId", projectManager);
-    }
-  }, [assignedProjectId, open]);
+    if (assignedProjectIds && assignedProjectIds.length > 0 && open) {
+      const selectedProjects = projects.filter((project) => assignedProjectIds.includes(project.id));
+      const managerIds = selectedProjects
+        ?.flatMap((project) =>
+          project.members
+            ?.filter((member) => member?.user?.role === "PM")
+            .map((member) => member?.user?.id)
+        )
+        .filter((id): id is number => id !== undefined);
+      form.setValue("managerIds", managerIds);
+    } 
+  }, [assignedProjectIds, open, projects, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -433,37 +440,21 @@ export function TLDialog({
               )}
             />
             <Controller
-              name="assignedProjectId"
+              name="assignedProjectIds"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel>Assign Projects</FieldLabel>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
-                      <FolderKanban className="h-4 w-4 mt-1" />
-                    </span>
-                    <Select
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectTrigger className="h-10! pl-10 w-full">
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Projects</SelectLabel>
-                          {projects.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <MultiSelect
+                    options={projects.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select projects"
+                    selectLabel="Projects"
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}
@@ -471,37 +462,21 @@ export function TLDialog({
 
             {/* Manager/Project Manager */}
             <Controller
-              name="managerId"
+              name="managerIds"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>Report To (Project Manager)</FieldLabel>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10">
-                      <UserRound className="h-4 w-4 mt-1" />
-                    </span>
-                    <Select
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectTrigger className="h-10! pl-10 w-full">
-                        <SelectValue placeholder="Select project manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Project Managers</SelectLabel>
-                          {projectManagers.map((pm) => (
-                            <SelectItem key={pm.id} value={String(pm.id)}>
-                              {pm.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <FieldLabel>Report To (Project Managers)</FieldLabel>
+                  <MultiSelect
+                    options={projectManagers.map((pm) => ({
+                      value: pm.id,
+                      label: pm.name,
+                    }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select project managers"
+                    selectLabel="Project Managers"
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

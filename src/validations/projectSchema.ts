@@ -4,12 +4,13 @@ export const createProjectSchema = z.object({
   name: z.string().min(1, "Project name is required").max(100, "Project name must not exceed 100 characters"),
   description: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED"]).optional(),
-  pmId: z.number().optional(),
-  tlId: z.number().optional(),
+  pmIds: z.array(z.number()).optional(),
+  tlIds: z.array(z.number()).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   teamMembers: z.array(z.number()).optional(),
   techstack: z.array(z.string()).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -17,12 +18,13 @@ export const updateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED"]).optional(),
-  pmId: z.number().optional(),
-  tlId: z.number().optional().nullable(),
+  pmIds: z.array(z.number()).optional(),
+  tlIds: z.array(z.number()).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   teamMembers: z.array(z.number()).optional(),
   techstack: z.array(z.string()).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 });
 
 export const getProjectsSchema = z.object({

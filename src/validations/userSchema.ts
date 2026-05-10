@@ -11,7 +11,8 @@ export const createUserSchema = z.object({
     phone: z.string().trim().max(20).optional(),
     skills: z.array(z.string()).optional(),
     managerId: z.number().nullable().optional(),
-    assignedProjectId: z.number().nullable().optional(),
+    managerIds: z.array(z.number()).optional(),
+    assignedProjectIds: z.array(z.number()).optional(),
 }).refine(
     (data) => data.role !== "TM" || !data.password,
     {
@@ -32,22 +33,24 @@ export const updateUserSchema = z.object({
     email: z.string().trim().email("Invalid email address").optional(),
     role: z.nativeEnum(Role).optional(),
     managerId: z.number().nullable().optional(),
+    managerIds: z.array(z.number()).optional(),
     designation: z.string().trim().max(50).optional(),
     department: z.string().trim().max(50).optional(),
     phone: z.string().trim().max(20).optional(),
     skills: z.array(z.string()).optional(),
-    assignedProjectId: z.number().nullable().optional(),
+    assignedProjectIds: z.array(z.number()).optional(),
 }).refine(
     (data) =>
         data.name !== undefined ||
         data.email !== undefined ||
         data.role !== undefined ||
         data.managerId !== undefined ||
+        data.managerIds !== undefined ||
         data.designation !== undefined ||
         data.department !== undefined ||
         data.phone !== undefined ||
         data.skills !== undefined ||
-        data.assignedProjectId !== undefined,
+        data.assignedProjectIds !== undefined,
     {
         message: "At least one field is required to update the user",
         path: ["id"],

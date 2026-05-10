@@ -13,9 +13,10 @@ import { useSearchParams } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip";
+import { TeamAvatars } from "@/components/TeamAvatars";
 
 const columns: TableColumn<User>[] = [
   {
@@ -75,18 +76,20 @@ const columns: TableColumn<User>[] = [
     label: "Team Lead",
     width: "w-[15%]",
     renderCell: (user) => {
-      const manager = user.manager;
-      if (!manager) {
-        return <div className="text-sm text-center pr-4">-</div>;
-      }
+      const managers = user.memberProjects?.map((item) => item?.manager).filter((m): m is { id: number; name: string; email?: string } => m !== undefined) || [];
       return (
-        <span className="text-sm">{manager.name}</span>
+        <TeamAvatars
+          members={managers}
+          emptyMessage="-"
+          showNameWhenSingle={true}
+          size="sm"
+        />
       );
     },
   },
   {
     key: "projectCount",
-    label: "Project Count",
+    label: "Projects",
     width: "w-[12%]",
     renderCell: (user) => (
       <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
@@ -127,17 +130,17 @@ export interface User extends Record<string, unknown> {
   managerId?: number | null;
   createdAt?: Date;
   updatedAt?: Date;
-  memberProjects?: Array<{ 
+  memberProjects?: Array<{
     project: {
       id: number;
       name?: string;
     };
+    manager?: {
+      id: number;
+      name: string;
+      email?: string;
+    } | undefined;
   }>;
-  manager?: {
-    id: number;
-    name?: string;
-    email?: string;
-  } | null;
 }
 
 interface TeamMemberListProps {
@@ -261,7 +264,9 @@ function TeamMemberList({ initialData }: TeamMemberListProps) {
                   description: (row) =>
                     `"${row.name}" will be removed permanently.`,
                 }}
-                isDeleteDisabled={(row) => (row.memberProjects?.length || 0) > 0}
+                isDeleteDisabled={(row) =>
+                  (row.memberProjects?.length || 0) > 0
+                }
                 deleteDisabledMessage="Please unassign from all projects before deleting"
               />
             </TooltipProvider>

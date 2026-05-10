@@ -104,7 +104,7 @@ function LoginContent() {
     };
 
     return (
-        <main className="relative min-h-screen overflow-hidden">
+        <main className="relative min-h-screen overflow-hidden bg-muted">
             {/* <video
                 autoPlay
                 muted

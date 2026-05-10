@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, User, Calendar, Briefcase, Code2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  User,
+  Calendar,
+  Briefcase,
+  Code2,
+} from "lucide-react";
 import Link from "next/link";
 import { getProjectByIdService } from "@/services/project.service";
 import { generateColor } from "@/lib/utils";
@@ -17,6 +24,40 @@ export default async function ProjectDetailPage({
   if (!project) {
     notFound();
   }
+
+  const pmList = project.members?.filter((m: any) => m.role === "PM") || [];
+  const tlList = project.members?.filter((m: any) => m.role === "TL") || [];
+  const tmList = project.members?.filter((m: any) => m.role === "TM") || [];
+
+  const MemberItem = ({ member }: { member: any }) => (
+    <div className="flex items-center gap-3">
+      <div
+        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+        style={{
+          backgroundColor: generateColor(member.user.name, member.user.id),
+        }}
+      >
+        {member.user.name
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase()}
+      </div>
+      <div>
+        <p className="font-semibold">{member.user.name}</p>
+        <p className="text-xs text-muted-foreground">{member.user.email}</p>
+        {/* {member.manager && (
+          <p className="text-xs text-muted-foreground">
+            Reports to: {member.manager.name}
+          </p>
+        )} */}
+      </div>
+      <span className="ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">
+        {member.user.role}
+      </span>
+    </div>
+  );
 
   return (
     <div className="p-3">
@@ -74,45 +115,21 @@ export default async function ProjectDetailPage({
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Project Manager */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Project Managers */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Briefcase className="h-5 w-5" />
-                Project Manager
+                Project Manager{pmList.length > 1 ? "s" : ""} ({pmList.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="-mt-5">
-              {project.projectManager ? (
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold"
-                    style={{
-                      backgroundColor: generateColor(
-                        project.projectManager.name,
-                        project.projectManager.id,
-                      ),
-                    }}
-                  >
-                    {project.projectManager.name
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-semibold">
-                      {project.projectManager.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {project.projectManager.email}
-                    </p>
-                    <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium mt-1">
-                      {project.projectManager.role}
-                    </span>
-                  </div>
+              {pmList.length > 0 ? (
+                <div className="grid gap-3">
+                  {pmList.map((member: any) => (
+                    <MemberItem key={member.id} member={member} />
+                  ))}
                 </div>
               ) : (
                 <p className="text-muted-foreground">
@@ -122,42 +139,20 @@ export default async function ProjectDetailPage({
             </CardContent>
           </Card>
 
-          {/* Team Lead */}
+          {/* Team Leads */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <User className="h-5 w-5" />
-                Team Lead
+                Team Lead{tlList.length > 1 ? "s" : ""} ({tlList.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="-mt-5">
-              {project.teamLead ? (
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold"
-                    style={{
-                      backgroundColor: generateColor(
-                        project.teamLead.name,
-                        project.teamLead.id,
-                      ),
-                    }}
-                  >
-                    {project.teamLead.name
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-semibold">{project.teamLead.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {project.teamLead.email}
-                    </p>
-                    <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium mt-1">
-                      {project.teamLead.role}
-                    </span>
-                  </div>
+              {tlList.length > 0 ? (
+                <div className="grid gap-3">
+                  {tlList.map((member: any) => (
+                    <MemberItem key={member.id} member={member} />
+                  ))}
                 </div>
               ) : (
                 <p className="text-muted-foreground">No team lead assigned</p>
@@ -179,34 +174,36 @@ export default async function ProjectDetailPage({
               </CardHeader>
               <CardContent className="-mt-5">
                 <div className="flex flex-wrap gap-2">
-                  {(project.techstack as string[]).map((tech: string, index: number) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700"
-                    >
-                      {tech}
-                    </span>
-                  ))}
+                  {(project.techstack as string[]).map(
+                    (tech: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700"
+                      >
+                        {tech}
+                      </span>
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
-        {/* Team Members */}
+        {/* Team Members (TM only) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users className="h-5 w-5" />
-              Team Members ({project._count?.members || 0})
+              Team Members ({tmList.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="-mt-5">
-            {project.members && project.members.length > 0 ? (
+            {tmList.length > 0 ? (
               <div className="grid gap-3">
-                {project.members.map((member: any) => (
+                {tmList.map((member: any) => (
                   <div
-                    key={member.user.id}
-                    className="flex items-center justify-between rounded-lg "
+                    key={member.id}
+                    className="flex items-center justify-between rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -230,6 +227,11 @@ export default async function ProjectDetailPage({
                         <p className="text-xs text-muted-foreground">
                           {member.user.email}
                         </p>
+                        {/* {member.manager && (
+                          <p className="text-xs text-muted-foreground">
+                            Reports to: {member.manager.name} (TL)
+                          </p>
+                        )} */}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
