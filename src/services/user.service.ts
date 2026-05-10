@@ -282,6 +282,7 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
           select: {
             id: true,
             name: true,
+            role: true,
           },
         },
       },
@@ -317,12 +318,18 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
           (p) => p.status === "COMPLETED",
         ).length;
 
+        // Count TLs from subordinates
+        const tlCount = (user.subordinates || []).filter(
+          (sub) => sub.role === "TL"
+        ).length;
+
         return {
           ...user,
           managedProjects: projects,
           totalProjects: projects.length,
           activeProjects,
           completedProjects,
+          tlCount,
         };
       }),
     );
@@ -359,6 +366,7 @@ export async function getUsersService(payload: GetUsersPayload = {}) {
   });
 
   // For TLs, calculate unique TM count from managedProjects
+
   if (role === "TL") {
     const usersWithUniqueTMCount = users.map((user) => {
       const managedProjects = (user as any).managedProjects || [];
